@@ -66,11 +66,10 @@ computeIA <- function(organism,ont){
     # Make sure they're unique so we don't double-count any:
     goids   <- unique(goids[goids[,"Ontology"] == ont, "go_id"])
     # Initialize the empty list: (CONSIDER OTHER IMPLEMENTATIONS OF THE DATA)
-    term2seq<-as.list(rep(character(1),length(goids)))
+    term2seq <- as.list(rep(character(1),length(goids)))
     names(term2seq)<-goids
-    
-## Loop through sequences and update cell table with each match:
-## (this part will be computationally intensive)
+
+##Propagate annotations:
     for (i in names(test)) {
       idlist<-test[[i]] #get the ids pertaining to each sequence
       
@@ -80,13 +79,67 @@ computeIA <- function(organism,ont){
       #Remove repeats and the meaningless "all" tag:
       idlist<-unique(idlist)
       idlist<-idlist[idlist != "all"]
-      
-      #Add the sequence to each id in the list:
-      for (j in idlist) {
+      test[[i]] <- idlist
+    }
+    
+## Loop through sequences and update cell table with each match:
+## (this part will be computationally intensive)
+  
+    for (i in names(test)) {      
+      #Add the sequence to each id in the list:      
+      for (j in test[[i]]) {
         term2seq[[j]]<-append(term2seq[[j]],i)
       }
     }
 
+  #this removes the empty string from each element. It's kind of a hack, 
+  #the initialization of the object should be modified so this isn't needed.
+    for (i in 1:length(term2seq)) {
+      term2seq[[i]] <- term2seq[[i]][ term2seq[[i]]!="" ]
+    }
+
+## Now that we have this object, the next step is to calculate IA for each
+## term. To get the parent ocurrence count for each term, look at its parent
+## set and find the size of the intersection between their annotated seqs.
+## Then compute IA by taking -log of parent count/term count for each term.
+
+  #First, Get all the parent terms for each term.
+    Parents.name <- switch(ont,
+                        MF = "GOMFPARENTS",
+                        BP = "GOBPPARENTS",
+                        CC = "GOCCPARENTS")
+
+    Parents <- AnnotationDbi::as.list(get(Parents.name,envir=GOSemSimEnv))
+    Parents <- Parents[!is.na(Parents)]
+  
+  #Next, create the parent count list with a sapply that steps through
+  #term2seq's name object and finds the number of times the parents of each
+  #term appear together by taking the set intersect of the sets of sequences
+  #that each parent annotates.
+
+    parentcnt <- sapply(names(term2seq), 
+                        #maybe make this a named function? this code is ugly
+                        function (x){ 
+                          seqs <- term2seq[[ Parents[[x]][1] ]]
+                          for (i in Parents[[x]]) {
+                            seqs <- intersect(seqs, term2seq[[i]])
+                          }
+                          length(seqs)
+                        })
+
+  #Now that parent count has been computed, we need only divide this by the 
+  #count for each term and take -log2 to get information accretion. 
+  
+    termcnt <- sapply(term2seq, function (x) {length(x)})
+    #apply a pseudocount of 1 to terms that never appear:
+    termcnt <- sapply(termcnt, function (x) {if (x == 0) {1} else {x}})
+
+    pcond   <- parentcnt/termcnt
+    IAccr   <- -log2(pcond)
+
+    save(IAccr, 
+         file=paste(paste("Info_Accretion", organism, ont, sep="_"), ".rda", sep=""), 
+         compress="xz")
 
 ##---------------------------------------------------------------### -IG
 
