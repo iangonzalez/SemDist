@@ -5,24 +5,9 @@
 # Currently, this is a test modification of GOSemSim's computeIC function intended as a framework
 # within which to test my method. All changes from the original marked and explained with comments.
 
-## IG: .getParents is a modified .getOffsprings that obtains parent data instead. 
-.getAncestor <- function(ont="MF") {
-    if(!exists("GOSemSimEnv")) .initial()
-    wh_Ancestor <- switch(ont,
-                            MF = "MFANCESTOR",
-                            BP = "BPANCESTOR",
-                            CC = "CCANCESTOR"
-                            )
-    Ancestor <- switch(ont,
-                         MF = AnnotationDbi::as.list(GOMFANCESTOR) ,
-                         BP = AnnotationDbi::as.list(GOBPANCESTOR) ,
-                         CC = AnnotationDbi::as.list(GOCCANCESTOR)
-                         )
-    assign(eval(wh_Ancestor), Ancestor, envir=GOSemSimEnv)#environment will be changed before package is complete.
-}
 ##----------------------------------------------------------------------------##
 
-computeIA <- function(organism,ont){
+computeIA <- function(organism,ont) {
 	  loadGOMap(organism)
     gomap   <- get("gomap", envir=GOSemSimEnv)
     #Understanding this is crucial.Here the code grabs all the gene
@@ -86,10 +71,9 @@ computeIA <- function(organism,ont){
 ## (this part will be computationally intensive)
   
     for (i in names(test)) {      
-      #Add the sequence to each id in the list:      
-      for (j in test[[i]]) {
-        term2seq[[j]]<-append(term2seq[[j]],i)
-      }
+      #Add the sequence to each id in the list:  
+      term2seq[ test[[i]] ] <- lapply(term2seq[ test[[i]] ], 
+                                      function(x) append(x, i))
     }
 
   #this removes the empty string from each element. It's kind of a hack, 
@@ -140,75 +124,12 @@ computeIA <- function(organism,ont){
     save(IAccr, 
          file=paste(paste("Info_Accretion", organism, ont, sep="_"), ".rda", sep=""), 
          compress="xz")
+}
 
 ##---------------------------------------------------------------### -IG
 
 
-    ## all GO terms appearing in an given ontology ###########
-    goterms <- unlist(sapply(gomap, function(x) names(x[x == ont])), use.names=FALSE)
-
-    ## require(GO.db)
-    if ( !exists("ALLGOID", envir=GOSemSimEnv) ) {
-        assign("ALLGOID", toTable(GOTERM), envir=GOSemSimEnv )
-    }
-    #Get calls an R object using a character string.-IG
-    goids   <- get("ALLGOID", envir=GOSemSimEnv)
-    ##goids <- toTable(GOTERM)
-
-    ## all go terms which belong to the corresponding ontology..
-    goids   <- unique(goids[goids[,"Ontology"] == ont, "go_id"])
-    gocount <- table(goterms)
-    goname  <- names(gocount) #goid of specific organism and selected category.
-
-    ## ensure goterms not appearing in the specific annotation have 0 frequency..
-    go.diff        <- setdiff(goids, goname)
-    m              <- double(length(go.diff))
-    names(m)       <- go.diff
-    gocount        <- as.vector(gocount)
-    names(gocount) <- goname
-    gocount        <- c(gocount, m)
-    ##^^^^????? -IG
-
-    Offsprings.name <- switch(ont,
-                              MF = "MFOffsprings",
-                              BP = "BPOffsprings",
-                              CC = "CCOffsprings"
-                              )
-    if (!exists(Offsprings.name, envir=GOSemSimEnv)) {
-        .getOffsprings(ont)
-    }
-    Offsprings <- get(Offsprings.name, envir=GOSemSimEnv)
-    cnt        <- sapply(goids,function(x){ n=gocount[ Offsprings[[x]] ]; gocount[x]+sum(n[!is.na(n)])})
-    names(cnt) <- goids
-  	## the probabilities of occurrence of GO terms in a specific corpus.
-  	p          <- cnt/sum(gocount)
-  	## IC of GO terms was quantified as the negative log likelihood.
-  	IC         <- -log(p)
-
-##--------------------------------------------------------------------------------------------------##
-    ## IG: Added this section to read in Parent data.
-    Ancestor.name <- switch(ont,
-                              MF = "MFANCESTOR",
-                              BP = "BPANCESTOR",
-                              CC = "CCANCESTOR"
-                              )
-    if (!exists(Ancestor.name, envir=GOSemSimEnv)) {#environment will be changed when package complete
-        .getAncestor(ont="BP")
-    }
-    
-    squeeze<-character(length=length(Parents))
-    for (i in 1:length(Parents)){##collapse all parents into one string for easier use
-        squeeze[i]<-paste(Parents[[i]],sep="",collapse="")
-    }
-    #Calculate how many times each parent set appears (WORK IN PROGRESS)
-    #Address the case in which parent sets are equivalent but differently ordered.
-    parentcnt<-sapply(goids,function(x){length(squeeze[squeeze==squeeze[x]])}) 
-    pcond   <- parentscnt/cnt
-    IA      <- -log(pcond)
-##---------------------------------------------------------------------------------------------------##
-
-    save(IC, file=paste(paste("Info_Contents", organism, ont, sep="_"), ".rda", sep=""), compress="xz")
-}
+## General notes on the code:
 
 ## Use set functions: Intersect of A and B should equal length of A
 ## CREATE A LABEL MATRIX USING GO DATA
