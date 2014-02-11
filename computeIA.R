@@ -1,4 +1,5 @@
-# Author: Ian Gonzalez
+# Title: computeIA.R
+# Author: Ian Gonzalez, 1/2014
 # Package: SemDist
 # A method to compute the information accretion of all the GO terms 
 # for a given ontology.
@@ -9,20 +10,19 @@
 
 computeIA <- function(organism,ont) {
 	  loadGOMap(organism)
-    gomap   <- get("gomap", envir=GOSemSimEnv)
+    gomap        <- get("gomap", envir=GOSemSimEnv)
     #Understanding this is crucial.Here the code grabs all the gene
     #information for the organism then converts it into a new format. -IG
     mapped_genes <- mappedkeys(gomap)
-    gomap <- AnnotationDbi::as.list(gomap[mapped_genes])
-    ## GOMAP IS THE SEQUENCES
-    gomap <- sapply(gomap, function(x) sapply(x, function(y) y$Ontology))
+    gomap        <- AnnotationDbi::as.list(gomap[mapped_genes])
+    gomap        <- sapply(gomap, function(x) sapply(x, function(y) y$Ontology))
     
 ## Manipulate the gomap data into a more useful form:
 ##
-	  test<-sapply(gomap, function(x) {names(x[x==ont])})
-	  test<-test[length(test)==0]
-	  test<-sapply(gomap, function(x) {names(x[x==ont])})
-	  test<-test[sapply(test, function(x) {if (length(x)==0) {FALSE} else {TRUE}})]
+	  seq2terms <- sapply(gomap, function(x) {names(x[x==ont])})
+	  seq2terms <- seq2terms[length(seq2terms)==0]
+	  seq2terms <- sapply(gomap, function(x) {names(x[x==ont])})
+	  seq2terms <- seq2terms[sapply(seq2terms, function(x) {if (length(x)==0) {FALSE} else {TRUE}})]
 ## This ends up being a list that maps sequences to their GO terms in this ont
 
 ## Now we just need to get the Ancestor list to make sure everything is
@@ -37,7 +37,7 @@ computeIA <- function(organism,ont) {
 ## This Ancestor object contains a mapping of each GO term to ALL its
 ## ancestors in the given ontology.
 
-## Finally, we step through each sequence in the gomap (test object for now),
+## Finally, we step through each sequence in the gomap (seq2terms object),
 ## step through each ID for the sequence and all of its ancestors, and add the
 ## sequence to the list mapped to each ID in a 2D array:
 
@@ -47,33 +47,29 @@ computeIA <- function(organism,ont) {
       assign("ALLGOID", toTable(GOTERM), envir=GOSemSimEnv )
     }
     # Get all the possible terms:
-    goids   <- get("ALLGOID", envir=GOSemSimEnv)
+    goids     <- get("ALLGOID", envir=GOSemSimEnv)
     # Make sure they're unique so we don't double-count any:
-    goids   <- unique(goids[goids[,"Ontology"] == ont, "go_id"])
+    goids     <- unique(goids[goids[,"Ontology"] == ont, "go_id"])
     # Initialize the empty list: (CONSIDER OTHER IMPLEMENTATIONS OF THE DATA)
-    term2seq <- as.list(rep(character(1),length(goids)))
-    names(term2seq)<-goids
+    term2seq  <- as.list(rep(character(1),length(goids)))
+
+    names(term2seq) <- goids
 
 ##Propagate annotations:
-    for (i in names(test)) {
-      idlist<-test[[i]] #get the ids pertaining to each sequence
-      
-      #Add the ancestor terms as well (propagates all annotations):
-      idlist<-c(idlist, 
-                unlist(sapply(test[[i]], function(x){Ancestor[[x]]})))
-      #Remove repeats and the meaningless "all" tag:
-      idlist<-unique(idlist)
-      idlist<-idlist[idlist != "all"]
-      test[[i]] <- idlist
-    }
-    
+##For each term set in the seq2term object, we append all the ancestors of each term in
+##the set and apply unique() to remove repeats.
+    seq2terms <- lapply(seq2terms,function(terms){
+      temp <- unique(c(terms, unlist(sapply(terms, function(term){Ancestor[[term]]}))))
+      temp[temp != "all"]
+    })
+        
 ## Loop through sequences and update cell table with each match:
 ## (this part will be computationally intensive)
   
-    for (i in names(test)) {      
-      #Add the sequence to each id in the list:  
-      term2seq[ test[[i]] ] <- lapply(term2seq[ test[[i]] ], 
-                                      function(x) append(x, i))
+    for (i in names(seq2terms)) {      
+      #Add the sequence to each id in the list that it's annotated with:  
+      term2seq[ seq2terms[[i]] ] <- lapply(term2seq[ seq2terms[[i]] ], 
+                                            function(x) append(x, i))
     }
 
   #this removes the empty string from each element. It's kind of a hack, 
@@ -110,15 +106,21 @@ computeIA <- function(organism,ont) {
                           }
                           length(seqs)
                         })
+    parentcnt <- parentcnt + 1 #add a pseudocount of 1 to each count to prevent 0s
+    
 
   #Now that parent count has been computed, we need only divide this by the 
   #count for each term and take -log2 to get information accretion. 
   
-    termcnt <- sapply(term2seq, function (x) {length(x)})
-    #apply a pseudocount of 1 to terms that never appear:
-    termcnt <- sapply(termcnt, function (x) {if (x == 0) {1} else {x}})
+    termcnt <- sapply(term2seq, length)
+    #apply a pseudocount of 1 to all terms here as well:
+    termcnt <- termcnt + 1
 
-    pcond   <- parentcnt/termcnt
+    #sets parent count of root term to #terms so its probability will be 1:
+    parentcnt[termcnt==max(termcnt)] <- max(termcnt) 
+    
+    #Calculate conditional probability, IA for all terms:
+    pcond <- termcnt/parentcnt 
     IAccr   <- -log2(pcond)
 
     save(IAccr, 
