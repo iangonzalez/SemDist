@@ -7,26 +7,29 @@
 # within which to test my method. All changes from the original marked and explained with comments.
 
 ##----------------------------------------------------------------------------##
-
+## ADD: ONLY GET TERMS WITH EXPERIMENTAL EVIDENCE CODES BY DEFAULT!!!!!!!
 computeIA <- function(organism,ont) {
-	  loadGOMap(organism)
+
+## Get all the sequence-goid data from GO.db:
+
+	  loadGOMap(organism) ##method from gene2GO.R (GOSemSim)
     gomap        <- get("gomap", envir=GOSemSimEnv)
-    #Understanding this is crucial.Here the code grabs all the gene
-    #information for the organism then converts it into a new format. -IG
     mapped_genes <- mappedkeys(gomap)
     gomap        <- AnnotationDbi::as.list(gomap[mapped_genes])
     gomap        <- sapply(gomap, function(x) sapply(x, function(y) y$Ontology))
     
 ## Manipulate the gomap data into a more useful form:
-##
+
 	  seq2terms <- sapply(gomap, function(x) {names(x[x==ont])})
 	  seq2terms <- seq2terms[length(seq2terms)==0]
 	  seq2terms <- sapply(gomap, function(x) {names(x[x==ont])})
 	  seq2terms <- seq2terms[sapply(seq2terms, function(x) {if (length(x)==0) {FALSE} else {TRUE}})]
+
 ## This ends up being a list that maps sequences to their GO terms in this ont
 
 ## Now we just need to get the Ancestor list to make sure everything is
 ## propagated when we make our table.
+
     Ancestor.name <- switch(ont,
                         MF = "GOMFANCESTOR",
                         BP = "GOBPANCESTOR",
@@ -34,6 +37,7 @@ computeIA <- function(organism,ont) {
     )
     Ancestor <- AnnotationDbi::as.list(get(Ancestor.name,envir=GOSemSimEnv))
     Ancestor <- Ancestor[!is.na(Ancestor)]
+
 ## This Ancestor object contains a mapping of each GO term to ALL its
 ## ancestors in the given ontology.
 
@@ -75,12 +79,12 @@ computeIA <- function(organism,ont) {
   #this removes the empty string from each element. It's kind of a hack, 
   #the initialization of the object should be modified so this isn't needed.
     for (i in 1:length(term2seq)) {
-      term2seq[[i]] <- term2seq[[i]][ term2seq[[i]]!="" ]
+      term2seq[[i]] <- term2seq[[i]][ term2seq[[i]] != "" ]
     }
 
 ## Now that we have this object, the next step is to calculate IA for each
 ## term. To get the parent ocurrence count for each term, look at its parent
-## set and find the size of the intersection between their annotated seqs.
+## set and find the size of the intersection between their annotated sequences.
 ## Then compute IA by taking -log of parent count/term count for each term.
 
   #First, Get all the parent terms for each term.
