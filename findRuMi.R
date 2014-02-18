@@ -1,6 +1,7 @@
 # Title: findRuMi.R
 # Author: Ian Gonzalez, 2/2014
 # Package: SemDist
+# Pakcages required: GO.db, ggplot2
 # This file contains code to access existing information accretion data about the ontology
 # and compare the true terms to a given set of predicted terms for a protein using the 
 # remaining uncertainty and misinformation metrics (information content analogs to 
@@ -100,65 +101,86 @@ getTrues <- function(filename) {
 ## Next: A function that the user can access that will return all the desired information.
 ## find.RU.MI will take a file of predicted terms (1 column each for sequences, terms, and scores from 0-1),
 ## a threshold value, the relevant ontological info (ont/organism) and return a data frame containing
-## RU and MI for each sequence whose terms were predicted.
+## RU and MI for each sequence whose terms were predicted. Alternatively, if fromfile is set to false,
+## the function will take the predIDs and trueIDs in the correct format if they've already been read in.
 
-## In progess: theshcurve=TRUE will create ru-mi curves by stepping through threshold values 0-1.
-
-find.RU.MI <- function(predfile, truefile, threshold = 0.0, ont, organism, threshcurve = FALSE) {   ## NEEDS A BETTER NAME
-     
-    trueIDs <- getTrues(truefile)       ##Read in data from given files
-    predIDs <- getPredictions(predfile)
+find.RU.MI <- function(predIDs="", trueIDs="", ont, organism, 
+                        threshold = 0.0, fromfile = TRUE, truefile="", predfile="") {
+    if (fromfile) {
+        trueIDs <- getTrues(truefile)       ##Read in data from given files if from file
+        predIDs <- getPredictions(predfile)
+    }
     seqs    <- unique(predIDs$seqids)   ##Get list of sequences whose annotations have been predicted
     answers <- data.frame("MI" = rep(NA, length(seqs)),     ##Initialize data frame for RU/MI values
                           "RU" = rep(NA, length(seqs)), 
                           row.names = seqs)
+    predIDs <- predIDs[predIDs$scores > threshold,]
 
     ## If no threshold curve desired, calculate the RU and MI for predicted terms above threshold value
     ## provided and put into the answers data frame. 
 
     ##SELF NOTE: LOOK INTO WAYS TO MAKE THIS FASTER. MAYBE COMBINE SAPPLYs SOMEHOW? -IG
-    if (!threshcurve) {
         #firsterr <- TRUE
 
-        ## Find misinformation for each sequence by calling computeMI on the sets of 
-        ## terms related to each sequence:
-        answers$MI <- sapply(seqs, function(seq){
-            ## If the sequence isn't in the true terms data, return an NA.
-            if (!(seq %in% trueIDs$seqids)) {
-                if (firsterr) {
-                    #cat("WARNING: One or more predicted sequences not found in true term file.\n")
-                    firsterr = FALSE
-                }
-                NA
-            } else {
-               computeMI(trueIDs$terms[trueIDs$seqids == seq],
-                          predIDs$terms[predIDs$seqids == seq & predIDs$scores > threshold],
-                          ont,
-                          organism)
-            }
-        })
+    ## Find misinformation for each sequence by calling computeMI on the sets of 
+    ## terms related to each sequence:
+    answers$MI <- sapply(seqs, function(seq){
+        ## If the sequence isn't in the true terms data, return an NA.
+        if (!(seq %in% trueIDs$seqids)) {
+            #if (firsterr) {
+            #cat("WARNING: One or more predicted sequences not found in true term file.\n")
+            #    firsterr = FALSE
+            #}
+            NA
+        } else {
+            computeMI(trueIDs$terms[trueIDs$seqids == seq],
+                       predIDs$terms[predIDs$seqids == seq],
+                       ont,
+                       organism)
+        }
+    })
         
-        ## Find remaining uncertainty for each sequence by calling computeRU on the sets of 
-        ## terms related to each sequence:
-        answers$RU <- sapply(seqs, function(seq){
-            ## Same as above.
-            if (!(seq %in% trueIDs$seqids)) {
-                    if (firsterr) {
-                        #cat("WARNING: One or more predicted sequences not found in true term file.\n")
-                        firsterr = FALSE
-                    }
-                    NA
-            } else {
-                computeRU(trueIDs$terms[trueIDs$seqids == seq],
-                      predIDs$terms[predIDs$seqids == seq & predIDs$scores > threshold],
+    ## Find remaining uncertainty for each sequence by calling computeRU on the sets of 
+    ## terms related to each sequence:
+    answers$RU <- sapply(seqs, function(seq){
+        ## Same as above.
+        if (!(seq %in% trueIDs$seqids)) {
+            #if (firsterr) {
+            #    #cat("WARNING: One or more predicted sequences not found in true term file.\n")
+            #    firsterr = FALSE
+            #}
+            NA
+        } else {
+            computeRU(trueIDs$terms[trueIDs$seqids == seq],
+                      predIDs$terms[predIDs$seqids == seq],
                       ont,
                       organism)
-            }
-        })          
-        return(answers)
+        }
+    })          
+    return(answers)
+}
+
+## RUMIcurve is function that takes in a function predictors predictions, the true annotations,
+## and information about which ontology to use and returns a ggplot object that shows the RU/MI
+## curve based on incrementing the threshold by the chosen value. Requires ggplot2 package
+
+RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05) {
+    thresholds <- seq(increment, 1-increment, increment)    ## Create the sequence of thresholds to loop over
+    curve      <- ggplot()                                  ## Initialize the plot
+    trueIDs <- getTrues(truefile)                           ## Read in data from given files if from file
+    for (file in predfiles) {                               ## For each file given in predfiles:
+        predIDs <- getPredictions(file)
+
+        ## Get the RU/MI data by looping through thresholds and calculating the mean RU and MI obtained for each value
+        data    <- sapply(thresholds, function(thresh) {
+            threshdata <- find.RU.MI(predIDs, trueIDs, ont, organism, threshold = thresh, fromfile = FALSE)
+            c(mean(threshdata$RU[!is.na(threshdata$RU)]), mean(threshdata$MI[!is.na(threshdata$MI)]))
+            })
+
+        ## Manipulate the data into ggplot-readable form and add its points and fit line onto the plot:
+        data <- data.frame(as.numeric(data[1,]),as.numeric(data[2,]))
+        colnames(data) <- c("RU","MI")
+        curve      <- curve + geom_point(data=data,aes(RU,MI)) + geom_line(data=data,aes(RU,MI))
     }
-    
-    else {
-        ## code to produce ru-mi curve (unless we want it in another function)
-    }
+    return(curve)
 }
