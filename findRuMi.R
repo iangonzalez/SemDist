@@ -1,7 +1,7 @@
 # Title: findRuMi.R
 # Author: Ian Gonzalez, 2/2014
 # Package: SemDist
-# Pakcages required: GO.db, ggplot2
+# Pakcages required: GO.db
 # This file contains code to access existing information accretion data about the ontology
 # and compare the true terms to a given set of predicted terms for a protein using the 
 # remaining uncertainty and misinformation metrics (information content analogs to 
@@ -161,16 +161,19 @@ find.RU.MI <- function(predIDs="", trueIDs="", ont, organism,
 }
 
 ## RUMIcurve is function that takes in a function predictors predictions, the true annotations,
-## and information about which ontology to use and returns a ggplot object that shows the RU/MI
-## curve based on incrementing the threshold by the chosen value. Requires ggplot2 package
+## and information about which ontology to use and plots a (base) scatterplot that shows the RU/MI
+## curve based on incrementing the threshold by the chosen value.
 
 RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05) {
     thresholds <- seq(increment, 1-increment, increment)    ## Create the sequence of thresholds to loop over
-    curve      <- ggplot()                                  ## Initialize the plot
     trueIDs <- getTrues(truefile)                           ## Read in data from given files if from file
+    colors <- c("blue","red","green","orange","purple","brown")
+    plot(0, 0, xlim=c(0,10), ylim=c(0,15), type="n")
+    i <- 1
     for (file in predfiles) {                               ## For each file given in predfiles:
+        cat("Plotting data for file: ", file, "\n")
         predIDs <- getPredictions(file)
-
+        predIDs <- predIDs[predIDs$scores != 0,]
         ## Get the RU/MI data by looping through thresholds and calculating the mean RU and MI obtained for each value
         data    <- sapply(thresholds, function(thresh) {
             threshdata <- find.RU.MI(predIDs, trueIDs, ont, organism, threshold = thresh, fromfile = FALSE)
@@ -180,7 +183,8 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05) {
         ## Manipulate the data into ggplot-readable form and add its points and fit line onto the plot:
         data <- data.frame(as.numeric(data[1,]),as.numeric(data[2,]))
         colnames(data) <- c("RU","MI")
-        curve      <- curve + geom_point(data=data,aes(RU,MI)) + geom_line(data=data,aes(RU,MI))
+        points(data, type="l", col=colors[i])
+        i <- i + 1
     }
-    return(curve)
+    legend(0,4,legend = predfiles, fill = colors)
 }
