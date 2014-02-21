@@ -8,7 +8,7 @@
 
 ##----------------------------------------------------------------------------##
 ## ADD: ONLY GET TERMS WITH EXPERIMENTAL EVIDENCE CODES BY DEFAULT!!!!!!!
-computeIA <- function(organism,ont) {
+computeIA <- function(organism,ont,evcodes) {
 
 ## Get all the sequence-goid data from GO.db:
 
@@ -16,6 +16,7 @@ computeIA <- function(organism,ont) {
     gomap        <- get("gomap", envir=GOSemSimEnv)
     mapped_genes <- mappedkeys(gomap)
     gomap        <- AnnotationDbi::as.list(gomap[mapped_genes])
+    gomap        <- lapply(gomap, function(x){x[x$Evidence %in% evcodes]})
     gomap        <- sapply(gomap, function(x) sapply(x, function(y) y$Ontology))
     
 ## Manipulate the gomap data into a more useful form:
@@ -41,9 +42,9 @@ computeIA <- function(organism,ont) {
 ## This Ancestor object contains a mapping of each GO term to ALL its
 ## ancestors in the given ontology.
 
-## Finally, we step through each sequence in the gomap (seq2terms object),
+## now we step through each sequence in the gomap (seq2terms object),
 ## step through each ID for the sequence and all of its ancestors, and add the
-## sequence to the list mapped to each ID in a 2D array:
+## sequence to the list mapped to each ID in a 2D array (term2seq object):
 
 ## Initializing the data structure:
     ## require(GO.db)

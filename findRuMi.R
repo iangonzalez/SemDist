@@ -55,33 +55,6 @@ getIA <- function(organism, ont) { ##also lifted from GOSemSim
     return(IA)
 }
 
-## Given a set of predicted IDs and a set of true IDs, computeRU returns the 
-## remaining uncertainty for the given ontology using information accretion data. 
-
-computeRU <- function(trueIDs, predIDs, ont, organism, method = "Clark") {
-    IA      <- getIA(organism, ont)
-    misses  <- setdiff(trueIDs, predIDs)
-    RU      <- sum(IA[misses][!is.na(IA[misses])])
-
-    return(RU)
-}
-
-## Given a set of predicted IDs and a set of true IDs, computeMI returns the 
-## misinformation for the given ontology using information accretion data. 
-
-computeMI <- function(trueIDs, predIDs, ont, organism, method = "Clark") {
-    IA      <- getIA(organism, ont)
-    wrongs  <- setdiff(predIDs, trueIDs)
-    MI      <- sum(IA[wrongs][!is.na(IA[wrongs])])
-    
-    return(MI)
-}
-
-## Adding the threshold values:
-## add a set of "scores" from 0:1 that the function predictor must give for each
-## term it considered. We step through the possible threshold acceptance values
-## from 0 to 1 and graph it to produce the relevant plot.
-
 ## Next: 2 functions to read in the predicted and true data from files.
 
 getPredictions <- function(filename) {
@@ -103,60 +76,46 @@ getTrues <- function(filename) {
 ## a threshold value, the relevant ontological info (ont/organism) and return a data frame containing
 ## RU and MI for each sequence whose terms were predicted. Alternatively, if fromfile is set to false,
 ## the function will take the predIDs and trueIDs in the correct format if they've already been read in.
+## If seqtrueIAs is set to a vector of values >= 0, the function will treat these as the sums of the true
+## terms for each sequence (otherwise it will calculate this on its own).
 
 find.RU.MI <- function(predIDs="", trueIDs="", ont, organism, 
-                        threshold = 0.0, fromfile = TRUE, truefile="", predfile="") {
+                        threshold = 0.0, fromfile = TRUE, truefile="", 
+                        predfile="", seqtrueIAs = -1) {
     if (fromfile) {
         trueIDs <- getTrues(truefile)       ##Read in data from given files if from file
         predIDs <- getPredictions(predfile)
     }
     seqs    <- unique(predIDs$seqids)   ##Get list of sequences whose annotations have been predicted
-    answers <- data.frame("MI" = rep(NA, length(seqs)),     ##Initialize data frame for RU/MI values
-                          "RU" = rep(NA, length(seqs)), 
-                          row.names = seqs)
-    predIDs <- predIDs[predIDs$scores > threshold,]
+    predIDs <- predIDs[predIDs$scores > threshold,]   ## Remove predictions below the threshold
+    IA      <- getIA(organism, ont)
 
-    ## If no threshold curve desired, calculate the RU and MI for predicted terms above threshold value
-    ## provided and put into the answers data frame. 
-
-    ##SELF NOTE: LOOK INTO WAYS TO MAKE THIS FASTER. MAYBE COMBINE SAPPLYs SOMEHOW? -IG
-        #firsterr <- TRUE
-
-    ## Find misinformation for each sequence by calling computeMI on the sets of 
-    ## terms related to each sequence:
-    answers$MI <- sapply(seqs, function(seq){
+    ## For each sequence, find its true and predicted terms, find their intersection,
+    ## and find the sum of information accretion over each of these three domains.
+    ## RU is calculated by subtracting the intersection from the true IA and MI is
+    ## calculated by subtracting the intersection from the pred IA.
+    answers <- sapply(seqs, function(seq){
         ## If the sequence isn't in the true terms data, return an NA.
         if (!(seq %in% trueIDs$seqids)) {
-            #if (firsterr) {
-            #cat("WARNING: One or more predicted sequences not found in true term file.\n")
-            #    firsterr = FALSE
-            #}
-            NA
+            c(NA, NA)
         } else {
-            computeMI(trueIDs$terms[trueIDs$seqids == seq],
-                       predIDs$terms[predIDs$seqids == seq],
-                       ont,
-                       organism)
+            seqtrues <- trueIDs$terms[trueIDs$seqids == seq]
+            seqpreds <- predIDs$terms[predIDs$seqids == seq]
+            crossover   <- intersect(seqtrues, seqpreds)
+            if (seqtrueIAs[1] >= 0) {
+              trueIA <- seqtrueIAs[seq]
+            } else {
+              trueIA <- sum(IA[seqtrues][!is.na(IA[seqtrues])])
+            }
+            predIA <- sum(IA[seqpreds][!is.na(IA[seqpreds])])
+            crossoverIA <- sum(IA[crossover][!is.na(IA[crossover])])
+            RU          <- trueIA - crossoverIA
+            MI          <- predIA - crossoverIA
+            c(RU, MI)
         }
     })
-        
-    ## Find remaining uncertainty for each sequence by calling computeRU on the sets of 
-    ## terms related to each sequence:
-    answers$RU <- sapply(seqs, function(seq){
-        ## Same as above.
-        if (!(seq %in% trueIDs$seqids)) {
-            #if (firsterr) {
-            #    #cat("WARNING: One or more predicted sequences not found in true term file.\n")
-            #    firsterr = FALSE
-            #}
-            NA
-        } else {
-            computeRU(trueIDs$terms[trueIDs$seqids == seq],
-                      predIDs$terms[predIDs$seqids == seq],
-                      ont,
-                      organism)
-        }
-    })          
+
+    ## These values are returned in a 2-row matrix with RU in first row, MI second.
     return(answers)
 }
 
@@ -168,23 +127,39 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05) {
     thresholds <- seq(increment, 1-increment, increment)    ## Create the sequence of thresholds to loop over
     trueIDs <- getTrues(truefile)                           ## Read in data from given files if from file
     colors <- c("blue","red","green","orange","purple","brown")
-    plot(0, 0, xlim=c(0,10), ylim=c(0,15), type="n")
+    plot(0, 0, xlab="Remaining Uncertainty",
+         ylab="Misinformation",xlim=c(0,10), ylim=c(0,15), type="n")  ## Initialize the plotting space
     i <- 1
-    for (file in predfiles) {                               ## For each file given in predfiles:
+    IA <- getIA(organism, ont)
+
+
+    ## For each file given in predfiles:
+    ## Get the predicted IDs from the file and generate a list of the IA sum for the true annotations
+    ## for each relevant sequence (since this only needs to be computed once).
+    ## Then step through the threshold values, calculating all the RU/MI information each time
+    ## and returning a 2 column data frame containing the average values obtained at each threshold.
+    ## Finally, plot the data using the base plot system.
+    for (file in predfiles) {                               
         cat("Plotting data for file: ", file, "\n")
-        predIDs <- getPredictions(file)
-        predIDs <- predIDs[predIDs$scores != 0,]
+        predIDs  <- getPredictions(file)
+        predIDs  <- predIDs[predIDs$scores != 0,]
+        seqs     <- unique(predIDs$seqids)
+        seqIAs   <- sapply(seqs, function(seq) {   ## get the true IAs for each sequence
+            seqtrues <- trueIDs$terms[trueIDs$seqids == seq]
+            sum(IA[seqtrues][!is.na(IA[seqtrues])])
+            })
+        names(seqIAs) <- seqs
         ## Get the RU/MI data by looping through thresholds and calculating the mean RU and MI obtained for each value
         data    <- sapply(thresholds, function(thresh) {
-            threshdata <- find.RU.MI(predIDs, trueIDs, ont, organism, threshold = thresh, fromfile = FALSE)
-            c(mean(threshdata$RU[!is.na(threshdata$RU)]), mean(threshdata$MI[!is.na(threshdata$MI)]))
+            threshdata <- find.RU.MI(predIDs, trueIDs, ont, organism, threshold = thresh,
+                                     fromfile = FALSE, seqtrueIAs=seqIAs)
+            c(mean(threshdata[1,][!is.na(threshdata[1,])]), mean(threshdata[2,][!is.na(threshdata[2,])]))
             })
 
-        ## Manipulate the data into ggplot-readable form and add its points and fit line onto the plot:
         data <- data.frame(as.numeric(data[1,]),as.numeric(data[2,]))
         colnames(data) <- c("RU","MI")
-        points(data, type="l", col=colors[i])
+        points(data, type="l", col=colors[i])  ## plot the data
         i <- i + 1
     }
-    legend(0,4,legend = predfiles, fill = colors)
+    legend(0, 6, legend = predfiles, fill = colors)
 }
