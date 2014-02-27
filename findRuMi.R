@@ -75,9 +75,16 @@ getTrues <- function(filename) {
 ## find.RU.MI will take a file of predicted terms (1 column each for sequences, terms, and scores from 0-1),
 ## a threshold value, the relevant ontological info (ont/organism) and return a data frame containing
 ## RU and MI for each sequence whose terms were predicted. Alternatively, if fromfile is set to false,
-## the function will take the predIDs and trueIDs in the correct format if they've already been read in.
+## the function will take the predIDs and trueIDs as data frams with seqids, terms, and scores data columns.
 ## If seqtrueIAs is set to a vector of values >= 0, the function will treat these as the sums of the true
 ## terms for each sequence (otherwise it will calculate this on its own).
+if (FALSE) {
+clarkIA <- read.table("MFO_IA.txt",colClasses="character")
+clarkIA2 <- clarkIA[,2]
+names(clarkIA2) <- clarkIA[,1]
+clarkIA <- clarkIA2
+clarkIA <- as.numeric(clarkIA)
+}
 
 find.RU.MI <- function(predIDs="", trueIDs="", ont, organism, 
                         threshold = 0.0, fromfile = TRUE, truefile="", 
@@ -88,6 +95,7 @@ find.RU.MI <- function(predIDs="", trueIDs="", ont, organism,
     }
     seqs    <- unique(predIDs$seqids)   ##Get list of sequences whose annotations have been predicted
     predIDs <- predIDs[predIDs$scores > threshold,]   ## Remove predictions below the threshold
+    #IA <- clarkIA
     IA      <- getIA(organism, ont)
 
     ## For each sequence, find its true and predicted terms, find their intersection,
@@ -123,14 +131,22 @@ find.RU.MI <- function(predIDs="", trueIDs="", ont, organism,
 ## and information about which ontology to use and plots a (base) scatterplot that shows the RU/MI
 ## curve based on incrementing the threshold by the chosen value.
 
-RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05) {
+##IDEA: ADD ... SO THEY CAN CHOOSE PLOT OPTION
+#truefile <- "MFO_LABELS.txt"
+#predfiles <- "MFO_BLAST.txt"
+ont <- "MF"
+organism <- "human"
+RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) {
     thresholds <- seq(increment, 1-increment, increment)    ## Create the sequence of thresholds to loop over
     trueIDs <- getTrues(truefile)                           ## Read in data from given files if from file
     colors <- c("blue","red","green","orange","purple","brown")
     plot(0, 0, xlab="Remaining Uncertainty",
-         ylab="Misinformation",xlim=c(0,10), ylim=c(0,15), type="n")  ## Initialize the plotting space
+         ylab="Misinformation",xlim=c(0,10), ylim=c(0,15), type="n",
+         ...)  ## Initialize the plotting space
     i <- 1
+    #IA <- clarkIA
     IA <- getIA(organism, ont)
+    output <- list()
 
 
     ## For each file given in predfiles:
@@ -151,6 +167,7 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05) {
         names(seqIAs) <- seqs
         ## Get the RU/MI data by looping through thresholds and calculating the mean RU and MI obtained for each value
         data    <- sapply(thresholds, function(thresh) {
+            cat("Now working on threshold: ",thresh,"\n")
             threshdata <- find.RU.MI(predIDs, trueIDs, ont, organism, threshold = thresh,
                                      fromfile = FALSE, seqtrueIAs=seqIAs)
             c(mean(threshdata[1,][!is.na(threshdata[1,])]), mean(threshdata[2,][!is.na(threshdata[2,])]))
@@ -160,6 +177,8 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05) {
         colnames(data) <- c("RU","MI")
         points(data, type="l", col=colors[i])  ## plot the data
         i <- i + 1
+        output <- append(output, data)
     }
     legend(0, 6, legend = predfiles, fill = colors)
+    output
 }
