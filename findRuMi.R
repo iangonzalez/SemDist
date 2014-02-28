@@ -67,6 +67,7 @@ getPredictions <- function(filename) {
 
 getTrues <- function(filename) {
     trues           <- read.table(filename, colClasses = "character")
+    trues <- trues[,1:2]
     colnames(trues) <- c("seqids", "terms")
     return(trues)
 }
@@ -78,17 +79,16 @@ getTrues <- function(filename) {
 ## the function will take the predIDs and trueIDs as data frams with seqids, terms, and scores data columns.
 ## If seqtrueIAs is set to a vector of values >= 0, the function will treat these as the sums of the true
 ## terms for each sequence (otherwise it will calculate this on its own).
-if (FALSE) {
+
 clarkIA <- read.table("MFO_IA.txt",colClasses="character")
-clarkIA2 <- clarkIA[,2]
+clarkIA2 <- as.numeric(clarkIA[,2])
 names(clarkIA2) <- clarkIA[,1]
 clarkIA <- clarkIA2
-clarkIA <- as.numeric(clarkIA)
-}
+
 
 find.RU.MI <- function(predIDs="", trueIDs="", ont, organism, 
-                        threshold = 0.0, fromfile = TRUE, truefile="", 
-                        predfile="", seqtrueIAs = -1) {
+                        threshold = 0.05, fromfile = TRUE, truefile="", 
+                        predfile="", seqtrueIAs = -1,seqtrues = -1) {
     if (fromfile) {
         trueIDs <- getTrues(truefile)       ##Read in data from given files if from file
         predIDs <- getPredictions(predfile)
@@ -102,26 +102,35 @@ find.RU.MI <- function(predIDs="", trueIDs="", ont, organism,
     ## and find the sum of information accretion over each of these three domains.
     ## RU is calculated by subtracting the intersection from the true IA and MI is
     ## calculated by subtracting the intersection from the pred IA.
-    answers <- sapply(seqs, function(seq){
-        ## If the sequence isn't in the true terms data, return an NA.
-        if (!(seq %in% trueIDs$seqids)) {
-            c(NA, NA)
-        } else {
-            seqtrues <- trueIDs$terms[trueIDs$seqids == seq]
-            seqpreds <- predIDs$terms[predIDs$seqids == seq]
-            crossover   <- intersect(seqtrues, seqpreds)
-            if (seqtrueIAs[1] >= 0) {
-              trueIA <- seqtrueIAs[seq]
-            } else {
-              trueIA <- sum(IA[seqtrues][!is.na(IA[seqtrues])])
-            }
-            predIA <- sum(IA[seqpreds][!is.na(IA[seqpreds])])
-            crossoverIA <- sum(IA[crossover][!is.na(IA[crossover])])
-            RU          <- trueIA - crossoverIA
-            MI          <- predIA - crossoverIA
-            c(RU, MI)
-        }
-    })
+    
+    seqpreds <- lapply(seqs,function(seq) predIDs$terms[predIDs$seqids == seq])
+    predIA <- sapply(seqpreds, function(preds) sum(IA[preds][!is.na(IA[preds])]))
+    crossover <- sapply(seqs, function(seq) intersect(seqtrues[seq],seqpreds[seq]))
+    crossoverIA <- sapply(crossover,function(int) sum(IA[int][!is.na(IA[int])]))
+    RU <- seqtrueIAs - crossoverIA
+    MI <- predIA - crossoverIA
+    answers <- data.frame(RU=RU,MI=MI)
+
+    # answers <- sapply(seqs, function(seq){
+    #     ## If the sequence isn't in the true terms data, return an NA.
+    #     if (!(seq %in% trueIDs$seqids)) {
+    #         c(NA, NA)
+    #     } else {
+    #         seqtrues <- trueIDs$terms[trueIDs$seqids == seq]
+    #         seqpreds <- predIDs$terms[predIDs$seqids == seq]
+    #         crossover   <- intersect(seqtrues, seqpreds)
+    #         if (seqtrueIAs[1] >= 0) {
+    #           trueIA <- seqtrueIAs[seq]
+    #         } else {
+    #           trueIA <- sum(IA[seqtrues][!is.na(IA[seqtrues])])
+    #         }
+    #         predIA <- sum(IA[seqpreds][!is.na(IA[seqpreds])])
+    #         crossoverIA <- sum(IA[crossover][!is.na(IA[crossover])])
+    #         RU          <- trueIA - crossoverIA
+    #         MI          <- predIA - crossoverIA
+    #         c(RU, MI)
+    #     }
+    # })
 
     ## These values are returned in a 2-row matrix with RU in first row, MI second.
     return(answers)
@@ -132,17 +141,16 @@ find.RU.MI <- function(predIDs="", trueIDs="", ont, organism,
 ## curve based on incrementing the threshold by the chosen value.
 
 ##IDEA: ADD ... SO THEY CAN CHOOSE PLOT OPTION
-#truefile <- "MFO_LABELS.txt"
-#predfiles <- "MFO_BLAST.txt"
+truefile <- "MFO_LABELS.txt"
+predfiles <- "MFO_BLAST.txt"
 ont <- "MF"
 organism <- "human"
 RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) {
     thresholds <- seq(increment, 1-increment, increment)    ## Create the sequence of thresholds to loop over
     trueIDs <- getTrues(truefile)                           ## Read in data from given files if from file
     colors <- c("blue","red","green","orange","purple","brown")
-    plot(0, 0, xlab="Remaining Uncertainty",
-         ylab="Misinformation",xlim=c(0,10), ylim=c(0,15), type="n",
-         ...)  ## Initialize the plotting space
+    #plot(0, 0, xlab="Remaining Uncertainty",
+    #     ylab="Misinformation",xlim=c(0,10), ylim=c(0,15), type="n")  ## Initialize the plotting space
     i <- 1
     #IA <- clarkIA
     IA <- getIA(organism, ont)
@@ -160,25 +168,28 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
         predIDs  <- getPredictions(file)
         predIDs  <- predIDs[predIDs$scores != 0,]
         seqs     <- unique(predIDs$seqids)
-        seqIAs   <- sapply(seqs, function(seq) {   ## get the true IAs for each sequence
-            seqtrues <- trueIDs$terms[trueIDs$seqids == seq]
-            sum(IA[seqtrues][!is.na(IA[seqtrues])])
+        seqtrues   <- lapply(seqs, function(seq) {   ## get the true IAs for each sequence
+            trueIDs$terms[trueIDs$seqids == seq]
+            #sum(IA[seqtrues][!is.na(IA[seqtrues])])
             })
+        seqIAs <- sapply(seqtrues, function(trues){
+          sum(IA[trues][!is.na(IA[trues])])
+        })
         names(seqIAs) <- seqs
         ## Get the RU/MI data by looping through thresholds and calculating the mean RU and MI obtained for each value
         data    <- sapply(thresholds, function(thresh) {
             cat("Now working on threshold: ",thresh,"\n")
             threshdata <- find.RU.MI(predIDs, trueIDs, ont, organism, threshold = thresh,
-                                     fromfile = FALSE, seqtrueIAs=seqIAs)
+                                     fromfile = FALSE, seqtrueIAs=seqIAs,seqtrues=seqtrues)
             c(mean(threshdata[1,][!is.na(threshdata[1,])]), mean(threshdata[2,][!is.na(threshdata[2,])]))
             })
 
         data <- data.frame(as.numeric(data[1,]),as.numeric(data[2,]))
         colnames(data) <- c("RU","MI")
-        points(data, type="l", col=colors[i])  ## plot the data
+        #points(data, type="l", col=colors[i])  ## plot the data
         i <- i + 1
         output <- append(output, data)
     }
-    legend(0, 6, legend = predfiles, fill = colors)
+    #legend(0, 6, legend = predfiles, fill = colors)
     output
 }
