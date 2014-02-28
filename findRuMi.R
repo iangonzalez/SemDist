@@ -10,6 +10,11 @@
 ##----------------------------------------------------------------------------------------##
 
 ## function to load information accretion data into the environment.
+setwd("~/Documents/Ian/SemDist")
+source('~/Documents/Ian/SemDist/gene2GO.R')
+source('~/Documents/Ian/SemDist/utilities.R')
+
+
 
 loadIA <- function(organism,ont) { ##taken from GOSemSim, dont get it yet
 	if(!exists("ICEnv")) .initial() 
@@ -62,13 +67,15 @@ getPredictions <- function(filename) {
     colnames(predictions) <- c("seqids","terms","scores")
     predictions$scores <- as.numeric(predictions$scores)    
     predictions <- predictions[predictions$scores != 0,]   #remove predictions with score 0
+    predictions <- as.data.frame(predictions)
     return(predictions)
 }
-
+  
 getTrues <- function(filename) {
     trues           <- read.table(filename, colClasses = "character")
     trues <- trues[,1:2]
     colnames(trues) <- c("seqids", "terms")
+    trues <- as.data.frame(trues)
     return(trues)
 }
 
@@ -95,18 +102,36 @@ find.RU.MI <- function(predIDs="", trueIDs="", ont, organism,
     }
     seqs    <- unique(predIDs$seqids)   ##Get list of sequences whose annotations have been predicted
     predIDs <- predIDs[predIDs$scores > threshold,]   ## Remove predictions below the threshold
-    #IA <- clarkIA
-    IA      <- getIA(organism, ont)
+    IA <- clarkIA
+    #IA      <- getIA(organism, ont)
 
     ## For each sequence, find its true and predicted terms, find their intersection,
     ## and find the sum of information accretion over each of these three domains.
     ## RU is calculated by subtracting the intersection from the true IA and MI is
     ## calculated by subtracting the intersection from the pred IA.
-    
-    seqpreds <- lapply(seqs,function(seq) predIDs$terms[predIDs$seqids == seq])
+    cat("Getting sequence predicted terms.\n")
+    seqpreds <- as.list(rep("",length(seqs)))
+    names(seqpreds) <- seqs
+    for (i in 1:length(predIDs$seqids)) {
+      end <- length(seqpreds[[ predIDs$seqids[i] ]])
+      seqpreds[[ predIDs$seqids[i] ]][end + 1] <- predIDs$terms[i]
+    }
+    cat(length(seqpreds),"\n")
+    cat(length(seqtrues),"\n")
+    cat(length(seqtrueIAs),"\n")
+    seqpreds <- lapply(seqpreds, function(x) x[x!=""])
+    #seqpreds <- lapply(seqs,function(seq) predIDs$terms[predIDs$seqids == seq])
+    cat("Getting IA values for predicted terms.\n")
     predIA <- sapply(seqpreds, function(preds) sum(IA[preds][!is.na(IA[preds])]))
-    crossover <- sapply(seqs, function(seq) intersect(seqtrues[seq],seqpreds[seq]))
+    cat("Doing the same for the intersect.\n")
+    crossover <- sapply(seqs, function(seq) {
+      #print(intersect(seqtrues[seq],seqpreds[seq]))
+      intersect(seqtrues[[seq]],seqpreds[[seq]])
+      })
+    cat(length(crossover),"\n")
     crossoverIA <- sapply(crossover,function(int) sum(IA[int][!is.na(IA[int])]))
+    cat(length(crossoverIA),"\n")
+    cat("Calculating RU, MI\n")
     RU <- seqtrueIAs - crossoverIA
     MI <- predIA - crossoverIA
     answers <- data.frame(RU=RU,MI=MI)
@@ -146,14 +171,14 @@ predfiles <- "MFO_BLAST.txt"
 ont <- "MF"
 organism <- "human"
 RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) {
-    thresholds <- seq(increment, 1-increment, increment)    ## Create the sequence of thresholds to loop over
+    thresholds <- seq(1-increment, increment, -1*increment)    ## Create the sequence of thresholds to loop over
     trueIDs <- getTrues(truefile)                           ## Read in data from given files if from file
     colors <- c("blue","red","green","orange","purple","brown")
     #plot(0, 0, xlab="Remaining Uncertainty",
     #     ylab="Misinformation",xlim=c(0,10), ylim=c(0,15), type="n")  ## Initialize the plotting space
     i <- 1
-    #IA <- clarkIA
-    IA <- getIA(organism, ont)
+    IA <- clarkIA
+    #IA <- getIA(organism, ont)
     output <- list()
 
 
@@ -168,10 +193,18 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
         predIDs  <- getPredictions(file)
         predIDs  <- predIDs[predIDs$scores != 0,]
         seqs     <- unique(predIDs$seqids)
-        seqtrues   <- lapply(seqs, function(seq) {   ## get the true IAs for each sequence
-            trueIDs$terms[trueIDs$seqids == seq]
-            #sum(IA[seqtrues][!is.na(IA[seqtrues])])
-            })
+        cat("Getting true terms\n")
+        #seqtrues   <- lapply(seqs, function(seq) {   ## get the true IAs for each sequence
+        #    trueIDs$terms[trueIDs$seqids == seq]
+        #    })
+        seqtrues <- as.list(rep("",length(seqs)))
+        names(seqtrues) <- seqs
+        for (i in 1:length(trueIDs$seqids)) {
+          end <- length(seqtrues[[ trueIDs$seqids[i] ]])
+          seqtrues[[ trueIDs$seqids[i] ]][end + 1] <- trueIDs$terms[i]
+        }
+        seqtrues <- lapply(seqtrues, function(x) x[x!=""])
+        cat("Getting true IAs\n")
         seqIAs <- sapply(seqtrues, function(trues){
           sum(IA[trues][!is.na(IA[trues])])
         })
@@ -181,7 +214,8 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
             cat("Now working on threshold: ",thresh,"\n")
             threshdata <- find.RU.MI(predIDs, trueIDs, ont, organism, threshold = thresh,
                                      fromfile = FALSE, seqtrueIAs=seqIAs,seqtrues=seqtrues)
-            c(mean(threshdata[1,][!is.na(threshdata[1,])]), mean(threshdata[2,][!is.na(threshdata[2,])]))
+            cat(mean(threshdata$RU), mean(threshdata$MI),"\n")
+            c(mean(threshdata$RU), mean(threshdata$MI))
             })
 
         data <- data.frame(as.numeric(data[1,]),as.numeric(data[2,]))
@@ -193,3 +227,5 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
     #legend(0, 6, legend = predfiles, fill = colors)
     output
 }
+
+attempt <- RUMIcurve(predfiles,truefile,ont,organism)
