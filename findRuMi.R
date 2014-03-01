@@ -100,7 +100,7 @@ find.RU.MI <- function(predIDs="", trueIDs="", ont, organism,
         trueIDs <- getTrues(truefile)       ##Read in data from given files if from file
         predIDs <- getPredictions(predfile)
     }
-    seqs    <- unique(predIDs$seqids)   ##Get list of sequences whose annotations have been predicted
+    seqs    <- unique(append(predIDs$seqids,trueIDs$seqids))   ##Get list of sequences whose annotations have been predicted
     predIDs <- predIDs[predIDs$scores > threshold,]   ## Remove predictions below the threshold
     IA <- clarkIA
     #IA      <- getIA(organism, ont)
@@ -116,9 +116,9 @@ find.RU.MI <- function(predIDs="", trueIDs="", ont, organism,
       end <- length(seqpreds[[ predIDs$seqids[i] ]])
       seqpreds[[ predIDs$seqids[i] ]][end + 1] <- predIDs$terms[i]
     }
-    cat(length(seqpreds),"\n")
-    cat(length(seqtrues),"\n")
-    cat(length(seqtrueIAs),"\n")
+    #cat(length(seqpreds),"\n")
+    #cat(length(seqtrues),"\n")
+    #cat(length(seqtrueIAs),"\n")
     seqpreds <- lapply(seqpreds, function(x) x[x!=""])
     #seqpreds <- lapply(seqs,function(seq) predIDs$terms[predIDs$seqids == seq])
     cat("Getting IA values for predicted terms.\n")
@@ -192,7 +192,7 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
         cat("Plotting data for file: ", file, "\n")
         predIDs  <- getPredictions(file)
         predIDs  <- predIDs[predIDs$scores != 0,]
-        seqs     <- unique(predIDs$seqids)
+        seqs     <- unique(append(predIDs$seqids,trueIDs$seqids))
         cat("Getting true terms\n")
         #seqtrues   <- lapply(seqs, function(seq) {   ## get the true IAs for each sequence
         #    trueIDs$terms[trueIDs$seqids == seq]
@@ -227,5 +227,5 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
     #legend(0, 6, legend = predfiles, fill = colors)
     output
 }
-
 attempt <- RUMIcurve(predfiles,truefile,ont,organism)
+save(attempt,file="attempt.rda")
