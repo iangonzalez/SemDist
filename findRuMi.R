@@ -10,9 +10,9 @@
 ##----------------------------------------------------------------------------------------##
 
 ## function to load information accretion data into the environment.
-setwd("~/SemDist")
-source('~/SemDist/gene2GO.R')
-source('~/SemDist/utilities.R')
+setwd("~/Documents/Ian/SemDist")
+source('~/Documents/Ian/SemDist/gene2GO.R')
+source('~/Documents/Ian/SemDist/utilities.R')
 
 
 
@@ -175,7 +175,7 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
         names(seqtrues) <- seqs
         for (i in 1:length(trueIDs$seqids)) {
           seqtrues[[ trueIDs$seqids[i] ]] <- append(seqtrues[[ trueIDs$seqids[i] ]],
-                                                    trueIDs$terms[i]
+                                                    trueIDs$terms[i])
         }
         seqtrues <- lapply(seqtrues, function(x) x[x!=""])
         cat("Getting true IAs\n")
@@ -190,16 +190,25 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
         names(seqpreds) <- seqs
         predIA <- rep(0,length(seqs))
         names(predIA) <- seqs
+        RU <- rep(0, length(trueIA))
+        MI <- rep(0, length(trueIA))
+        answers <- data.frame(threshold = thresholds,   #initialize frame to hold answers
+                              RU = rep(0,length(thresholds)),
+                              MI = rep(0,length(thresholds)))
         
-        for (thresh in thresholds) {
-            answers <- data.frame(threshold = thresholds,   #initialize frame to hold answers
-                                   RU = rep(0,length(thresholds)),
-                                   MI = rep(0,length(thresholds)))
+        for (thresh in thresholds) {    
             cat("Now working on threshold: ",thresh,"\n")
             cat("Getting sequence predicted terms.\n")
             # Get ONLY the new predicted IDs for this threshold range:
             newpreds <- predIDs[(predIDs$scores > thresh &
-                                predIDs$scores <= thresh + increment),] 
+                                predIDs$scores <= thresh + increment),]
+            # if there aren't any, just return the last RUMI values that were calculated
+            # or 0 if this is the first thresh being looked at
+            if (length(newpreds$seqids) < 1) {
+              answers$RU[answers$threshold == thresh] <- mean(RU)
+              answers$MI[answers$threshold == thresh] <- mean(MI)
+              next
+            }
             #Then add them to the seqpreds list of lists:
             for (i in 1:length(newpreds$seqids)) {
               seqpreds[[ newpreds$seqids[i] ]] <- append(seqpreds[[ newpreds$seqids[i] ]],
@@ -226,7 +235,7 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
             cat("MI: ", mean(MI), "\n")
             answers$RU[answers$threshold == thresh] <- mean(RU)
             answers$MI[answers$threshold == thresh] <- mean(MI)
-            output <- append(output, answers)
+            #output <- append(output, answers)
         }
 ##END testing a new way--------------------------------------------------------------------------------##
 
@@ -236,7 +245,8 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
         i <- i + 1
     }
     #legend(0, 6, legend = predfiles, fill = colors)
-    output
+    #output
+    answers
 }
 attempt <- RUMIcurve(predfiles,truefile,ont,organism)
 save(attempt, file="attempt2.rda")
