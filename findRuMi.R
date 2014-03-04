@@ -10,9 +10,9 @@
 ##----------------------------------------------------------------------------------------##
 
 ## function to load information accretion data into the environment.
-setwd("~/Documents/Ian/SemDist")
-source('~/Documents/Ian/SemDist/gene2GO.R')
-source('~/Documents/Ian/SemDist/utilities.R')
+setwd("~/SemDist")
+source('~/SemDist/gene2GO.R')
+source('~/SemDist/utilities.R')
 
 
 
@@ -116,18 +116,14 @@ find.RU.MI <- function(predIDs="", trueIDs="", ont, organism,
       end <- length(seqpreds[[ predIDs$seqids[i] ]])
       seqpreds[[ predIDs$seqids[i] ]][end + 1] <- predIDs$terms[i]
     }
-    #cat(length(seqpreds),"\n")
-    #cat(length(seqtrues),"\n")
-    #cat(length(seqtrueIAs),"\n")
+
     seqpreds <- lapply(seqpreds, function(x) x[x!=""])
-    #seqpreds <- lapply(seqs,function(seq) predIDs$terms[predIDs$seqids == seq])
     cat("Getting IA values for predicted terms.\n")
     predIA <- sapply(seqpreds, function(preds) sum(IA[preds][!is.na(IA[preds])]))
     cat("Doing the same for the intersect.\n")
     crossover <- sapply(seqs, function(seq) {
-      #print(intersect(seqtrues[seq],seqpreds[seq]))
       intersect(seqtrues[[seq]],seqpreds[[seq]])
-      })
+    })
     cat(length(crossover),"\n")
     crossoverIA <- sapply(crossover,function(int) sum(IA[int][!is.na(IA[int])]))
     cat(length(crossoverIA),"\n")
@@ -136,28 +132,7 @@ find.RU.MI <- function(predIDs="", trueIDs="", ont, organism,
     MI <- predIA - crossoverIA
     answers <- data.frame(RU=RU,MI=MI)
 
-    # answers <- sapply(seqs, function(seq){
-    #     ## If the sequence isn't in the true terms data, return an NA.
-    #     if (!(seq %in% trueIDs$seqids)) {
-    #         c(NA, NA)
-    #     } else {
-    #         seqtrues <- trueIDs$terms[trueIDs$seqids == seq]
-    #         seqpreds <- predIDs$terms[predIDs$seqids == seq]
-    #         crossover   <- intersect(seqtrues, seqpreds)
-    #         if (seqtrueIAs[1] >= 0) {
-    #           trueIA <- seqtrueIAs[seq]
-    #         } else {
-    #           trueIA <- sum(IA[seqtrues][!is.na(IA[seqtrues])])
-    #         }
-    #         predIA <- sum(IA[seqpreds][!is.na(IA[seqpreds])])
-    #         crossoverIA <- sum(IA[crossover][!is.na(IA[crossover])])
-    #         RU          <- trueIA - crossoverIA
-    #         MI          <- predIA - crossoverIA
-    #         c(RU, MI)
-    #     }
-    # })
-
-    ## These values are returned in a 2-row matrix with RU in first row, MI second.
+    ## These values are returned in a data frame with RU in first col, MI second.
     return(answers)
 }
 
@@ -179,6 +154,7 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
     i <- 1
     IA <- clarkIA
     #IA <- getIA(organism, ont)
+
     output <- list()
 
 
@@ -193,39 +169,74 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
         predIDs  <- getPredictions(file)
         predIDs  <- predIDs[predIDs$scores != 0,]
         seqs     <- unique(append(predIDs$seqids,trueIDs$seqids))
+
         cat("Getting true terms\n")
-        #seqtrues   <- lapply(seqs, function(seq) {   ## get the true IAs for each sequence
-        #    trueIDs$terms[trueIDs$seqids == seq]
-        #    })
         seqtrues <- as.list(rep("",length(seqs)))
         names(seqtrues) <- seqs
         for (i in 1:length(trueIDs$seqids)) {
-          end <- length(seqtrues[[ trueIDs$seqids[i] ]])
-          seqtrues[[ trueIDs$seqids[i] ]][end + 1] <- trueIDs$terms[i]
+          seqtrues[[ trueIDs$seqids[i] ]] <- append(seqtrues[[ trueIDs$seqids[i] ]],
+                                                    trueIDs$terms[i]
         }
         seqtrues <- lapply(seqtrues, function(x) x[x!=""])
         cat("Getting true IAs\n")
-        seqIAs <- sapply(seqtrues, function(trues){
+        trueIA <- sapply(seqtrues, function(trues){
           sum(IA[trues][!is.na(IA[trues])])
         })
-        names(seqIAs) <- seqs
+        names(trueIA) <- seqs
         ## Get the RU/MI data by looping through thresholds and calculating the mean RU and MI obtained for each value
-        data    <- sapply(thresholds, function(thresh) {
+## TESTING a new way: ------------------------------------------------------------------------------------------------
+        seqpreds <- as.list(rep("",length(seqs)))
+        seqpreds <- lapply(seqpreds, function(x) x[x != ""])
+        names(seqpreds) <- seqs
+        predIA <- rep(0,length(seqs))
+        names(predIA) <- seqs
+        
+        for (thresh in thresholds) {
+            answers <- data.frame(threshold = thresholds,   #initialize frame to hold answers
+                                   RU = rep(0,length(thresholds)),
+                                   MI = rep(0,length(thresholds)))
             cat("Now working on threshold: ",thresh,"\n")
-            threshdata <- find.RU.MI(predIDs, trueIDs, ont, organism, threshold = thresh,
-                                     fromfile = FALSE, seqtrueIAs=seqIAs,seqtrues=seqtrues)
-            cat(mean(threshdata$RU), mean(threshdata$MI),"\n")
-            c(mean(threshdata$RU), mean(threshdata$MI))
+            cat("Getting sequence predicted terms.\n")
+            # Get ONLY the new predicted IDs for this threshold range:
+            newpreds <- predIDs[(predIDs$scores > thresh &
+                                predIDs$scores <= thresh + increment),] 
+            #Then add them to the seqpreds list of lists:
+            for (i in 1:length(newpreds$seqids)) {
+              seqpreds[[ newpreds$seqids[i] ]] <- append(seqpreds[[ newpreds$seqids[i] ]],
+                                                         newpreds$terms[i])
+            }
+            
+            cat("Seqpreds len: ",length(seqpreds),"\n")
+            cat("Getting IA values for predicted terms.\n")
+            for (i in 1:length(seqpreds)) {
+              predIA[i] <- sum(IA[ seqpreds[[i]] ][!is.na(seqpreds[[i]])])
+            }
+
+            cat("Doing the same for the intersect.\n")
+            crossover <- sapply(seqs, function(seq) {
+              intersect(seqtrues[[seq]],seqpreds[[seq]])
             })
 
-        data <- data.frame(as.numeric(data[1,]),as.numeric(data[2,]))
-        colnames(data) <- c("RU","MI")
+            crossoverIA <- sapply(crossover, function(int) sum(IA[int][!is.na(IA[int])]))
+
+            cat("Calculating RU, MI\n")
+            RU <- trueIA - crossoverIA
+            MI <- predIA - crossoverIA
+            cat("RU: ", mean(RU),"\n")
+            cat("MI: ", mean(MI), "\n")
+            answers$RU[answers$threshold == thresh] <- mean(RU)
+            answers$MI[answers$threshold == thresh] <- mean(MI)
+            output <- append(output, answers)
+        }
+##END testing a new way--------------------------------------------------------------------------------##
+
+        # data <- data.frame(as.numeric(data[1,]),as.numeric(data[2,]))
+        # colnames(data) <- c("RU","MI")
         #points(data, type="l", col=colors[i])  ## plot the data
         i <- i + 1
-        output <- append(output, data)
     }
     #legend(0, 6, legend = predfiles, fill = colors)
     output
 }
 attempt <- RUMIcurve(predfiles,truefile,ont,organism)
-save(attempt,file="attempt.rda")
+save(attempt, file="attempt2.rda")
