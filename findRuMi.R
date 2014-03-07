@@ -169,6 +169,7 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
         predIDs  <- getPredictions(file)
         predIDs  <- predIDs[predIDs$scores != 0,]
         seqs     <- unique(append(predIDs$seqids,trueIDs$seqids))
+        seqs     <- sort(seqs)
 
         cat("Getting true terms\n")
         seqtrues <- as.list(rep("",length(seqs)))
@@ -177,14 +178,30 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
           seqtrues[[ trueIDs$seqids[i] ]] <- append(seqtrues[[ trueIDs$seqids[i] ]],
                                                     trueIDs$terms[i])
         }
+        
         seqtrues <- lapply(seqtrues, function(x) x[x!=""])
         cat("Getting true IAs\n")
         trueIA <- sapply(seqtrues, function(trues){
           sum(IA[trues][!is.na(IA[trues])])
         })
         names(trueIA) <- seqs
+        
+        ## Checking the validity of true IA:    REMOVE AFTER TESTING
+        #realIA <- getTrues("Protein_IC_BN.txt")
+        #realIA$terms <- as.numeric(realIA$terms)
+        #  for (i in 1:length(realIA$terms)) {
+        #   if (isTRUE(all.equal(realIA$terms[i],trueIA[realIA$seqids[i]],check.names=FALSE))) {
+        #    next
+        #  } else {
+        #    cat(i," failed \n")
+        #    break
+        #  }
+        #}
+        #plot(1:length(x),realIA$terms-trueIA)
+        #same <- length(x[x == trueIA])
+        #cat(same, " out of ", length(trueIA), " terms are correct.\n")
+        
         ## Get the RU/MI data by looping through thresholds and calculating the mean RU and MI obtained for each value
-## TESTING a new way: ------------------------------------------------------------------------------------------------
         seqpreds <- as.list(rep("",length(seqs)))
         seqpreds <- lapply(seqpreds, function(x) x[x != ""])
         names(seqpreds) <- seqs
@@ -196,6 +213,11 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
                               RU = rep(0,length(thresholds)),
                               MI = rep(0,length(thresholds)))
         
+        #PROBLEM: RUMI values are off from Wyatt's
+        #THINGS TO CHECK TO FIND THE PROBLEM:
+        #1. Make sure that the root term is always predicted
+        #2. Check for terms that are right on the increment values! (there was no problem here)
+        #3. Check the RUMI values against those produced by Wyatt's code.
         for (thresh in thresholds) {    
             cat("Now working on threshold: ",thresh,"\n")
             cat("Getting sequence predicted terms.\n")
@@ -213,9 +235,10 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
             for (i in 1:length(newpreds$seqids)) {
               seqpreds[[ newpreds$seqids[i] ]] <- append(seqpreds[[ newpreds$seqids[i] ]],
                                                          newpreds$terms[i])
+              ## ADD A LINE HERE:
+              ## simply append the term to the crossover as well if its in the true set
             }
             
-            cat("Seqpreds len: ",length(seqpreds),"\n")
             cat("Getting IA values for predicted terms.\n")
             for (i in 1:length(seqpreds)) {
               predIA[i] <- sum(IA[ seqpreds[[i]] ][!is.na(seqpreds[[i]])])
@@ -230,14 +253,19 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
 
             cat("Calculating RU, MI\n")
             RU <- trueIA - crossoverIA
+            if (length(RU[RU<0]) > 0) {
+              cat("WARNING: Found negative values in RU.\n")
+            }
             MI <- predIA - crossoverIA
+            if (length(MI[MI<0]) > 0) {
+              cat("WARNING: Found negative values in MI.\n")
+            }
             cat("RU: ", mean(RU),"\n")
             cat("MI: ", mean(MI), "\n")
             answers$RU[answers$threshold == thresh] <- mean(RU)
             answers$MI[answers$threshold == thresh] <- mean(MI)
             #output <- append(output, answers)
         }
-##END testing a new way--------------------------------------------------------------------------------##
 
         # data <- data.frame(as.numeric(data[1,]),as.numeric(data[2,]))
         # colnames(data) <- c("RU","MI")
