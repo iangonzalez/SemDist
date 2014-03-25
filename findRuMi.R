@@ -10,9 +10,9 @@
 ##----------------------------------------------------------------------------------------##
 
 ## function to load information accretion data into the environment.
-setwd("~/Documents/Ian/SemDist")
-source('~/Documents/Ian/SemDist/gene2GO.R')
-source('~/Documents/Ian/SemDist/utilities.R')
+#setwd("~/Documents/Ian/SemDist")
+source('gene2GO.R')
+source('utilities.R')
 
 
 
@@ -241,27 +241,43 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
             
             cat("Getting IA values for predicted terms.\n")
             for (i in 1:length(seqpreds)) {
-              predIA[i] <- sum(IA[ seqpreds[[i]] ][!is.na(seqpreds[[i]])])
+              predIA[i] <- sum(IA[ seqpreds[[i]] ][!is.na(IA[seqpreds[[i]]])])
             }
 
             cat("Doing the same for the intersect.\n")
-            crossover <- sapply(seqs, function(seq) {
-              intersect(seqtrues[[seq]],seqpreds[[seq]])
-            })
+            # crossover <- sapply(seqs, function(seq) {
+            #   intersect(seqtrues[[seq]],seqpreds[[seq]])
+            # })
 
-            crossoverIA <- sapply(crossover, function(int) sum(IA[int][!is.na(IA[int])]))
+            # crossoverIA <- sapply(crossover, function(int) sum(IA[int][!is.na(IA[int])]))
+            
+            rudiff <- sapply(seqs, function(seq) {
+              setdiff(seqtrues[[seq]], seqpreds[[seq]])
+            })
+            
+            midiff <- sapply(seqs, function(seq) {
+              setdiff(seqpreds[[seq]], seqtrues[[seq]])
+            })
+            
+            ruIA <- sapply(rudiff, function(int) sum(IA[int][!is.na(IA[int])]))
+            miIA <- sapply(midiff, function(int) sum(IA[int][!is.na(IA[int])]))
 
             cat("Calculating RU, MI\n")
-            RU <- trueIA - crossoverIA
+            RU <- ruIA
             if (length(RU[RU<0]) > 0) {
               cat("WARNING: Found negative values in RU.\n")
             }
-            MI <- predIA - crossoverIA
+            MI <- miIA
             if (length(MI[MI<0]) > 0) {
               cat("WARNING: Found negative values in MI.\n")
             }
             cat("RU: ", mean(RU),"\n")
             cat("MI: ", mean(MI), "\n")
+            if (thresh == 0.86) {
+              save(RU, file="RU85.rda")
+              save(MI, file="MI85.rda")
+            }
+            
             answers$RU[answers$threshold == thresh] <- mean(RU)
             answers$MI[answers$threshold == thresh] <- mean(MI)
             #output <- append(output, answers)
@@ -276,5 +292,5 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
     #output
     answers
 }
-attempt <- RUMIcurve(predfiles,truefile,ont,organism)
+attempt <- RUMIcurve(predfiles,truefile,ont,organism, increment = 0.01)
 save(attempt, file="attempt2.rda")
