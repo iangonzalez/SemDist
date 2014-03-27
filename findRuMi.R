@@ -10,7 +10,7 @@
 ##----------------------------------------------------------------------------------------##
 
 ## function to load information accretion data into the environment.
-#setwd("~/Documents/Ian/SemDist")
+setwd("~/Documents/Ian/SemDist")
 source('gene2GO.R')
 source('utilities.R')
 
@@ -142,7 +142,7 @@ find.RU.MI <- function(predIDs="", trueIDs="", ont, organism,
 
 ##IDEA: ADD ... SO THEY CAN CHOOSE PLOT OPTION
 truefile <- "MFO_LABELS.txt"
-predfiles <- "MFO_BLAST.txt"
+predfiles <- "MFO_RANDOM.txt"
 ont <- "MF"
 organism <- "human"
 RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) {
@@ -156,7 +156,15 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
     #IA <- getIA(organism, ont)
 
     output <- list()
-
+    
+    ## Get all GO term ancestors for later propagation step:
+    Ancestor.name <- switch(ont,
+                            MF = "GOMFANCESTOR",
+                            BP = "GOBPANCESTOR",
+                            CC = "GOCCANCESTOR"
+    )
+    Ancestor <- AnnotationDbi::as.list(get(Ancestor.name,envir=GOSemSimEnv))
+    Ancestor <- Ancestor[!is.na(Ancestor)]
 
     ## For each file given in predfiles:
     ## Get the predicted IDs from the file and generate a list of the IA sum for the true annotations
@@ -178,28 +186,18 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
           seqtrues[[ trueIDs$seqids[i] ]] <- append(seqtrues[[ trueIDs$seqids[i] ]],
                                                     trueIDs$terms[i])
         }
-        
         seqtrues <- lapply(seqtrues, function(x) x[x!=""])
+        ## Propagate all the true terms with all ancestors up to the root:
+        #seqtrues <- lapply(seqtrues,function(terms){
+        #  temp <- unique(c(terms, unlist(sapply(terms, function(term) { Ancestor[[term]] }))))
+        #  temp[temp != "all"]
+        #})
         cat("Getting true IAs\n")
         trueIA <- sapply(seqtrues, function(trues){
           sum(IA[trues][!is.na(IA[trues])])
         })
         names(trueIA) <- seqs
-        
-        ## Checking the validity of true IA:    REMOVE AFTER TESTING
-        #realIA <- getTrues("Protein_IC_BN.txt")
-        #realIA$terms <- as.numeric(realIA$terms)
-        #  for (i in 1:length(realIA$terms)) {
-        #   if (isTRUE(all.equal(realIA$terms[i],trueIA[realIA$seqids[i]],check.names=FALSE))) {
-        #    next
-        #  } else {
-        #    cat(i," failed \n")
-        #    break
-        #  }
-        #}
-        #plot(1:length(x),realIA$terms-trueIA)
-        #same <- length(x[x == trueIA])
-        #cat(same, " out of ", length(trueIA), " terms are correct.\n")
+  
         
         ## Get the RU/MI data by looping through thresholds and calculating the mean RU and MI obtained for each value
         seqpreds <- as.list(rep("",length(seqs)))
@@ -212,12 +210,7 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
         answers <- data.frame(threshold = thresholds,   #initialize frame to hold answers
                               RU = rep(0,length(thresholds)),
                               MI = rep(0,length(thresholds)))
-        
-        #PROBLEM: RUMI values are off from Wyatt's
-        #THINGS TO CHECK TO FIND THE PROBLEM:
-        #1. Make sure that the root term is always predicted
-        #2. Check for terms that are right on the increment values! (there was no problem here)
-        #3. Check the RUMI values against those produced by Wyatt's code.
+
         for (thresh in thresholds) {    
             cat("Now working on threshold: ",thresh,"\n")
             cat("Getting sequence predicted terms.\n")
@@ -235,6 +228,9 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
             for (i in 1:length(newpreds$seqids)) {
               seqpreds[[ newpreds$seqids[i] ]] <- append(seqpreds[[ newpreds$seqids[i] ]],
                                                          newpreds$terms[i])
+              ## This step also adds any ancestor terms of the term being added (propagation):
+              seqpreds[[ newpreds$seqids[i] ]] <- unique(c(seqpreds[[ newpreds$seqids[i] ]], 
+                                                           Ancestor[[ newpreds$terms[i] ]]))
               ## ADD A LINE HERE:
               ## simply append the term to the crossover as well if its in the true set
             }
@@ -245,38 +241,23 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
             }
 
             cat("Doing the same for the intersect.\n")
-            # crossover <- sapply(seqs, function(seq) {
-            #   intersect(seqtrues[[seq]],seqpreds[[seq]])
-            # })
-
-            # crossoverIA <- sapply(crossover, function(int) sum(IA[int][!is.na(IA[int])]))
-            
-            rudiff <- sapply(seqs, function(seq) {
-              setdiff(seqtrues[[seq]], seqpreds[[seq]])
+            crossover <- sapply(seqs, function(seq) {
+             intersect(seqtrues[[seq]],seqpreds[[seq]])
             })
-            
-            midiff <- sapply(seqs, function(seq) {
-              setdiff(seqpreds[[seq]], seqtrues[[seq]])
-            })
-            
-            ruIA <- sapply(rudiff, function(int) sum(IA[int][!is.na(IA[int])]))
-            miIA <- sapply(midiff, function(int) sum(IA[int][!is.na(IA[int])]))
 
+            crossoverIA <- sapply(crossover, function(int) sum(IA[int][!is.na(IA[int])]))
+            
             cat("Calculating RU, MI\n")
-            RU <- ruIA
+            RU <- trueIA - crossoverIA
             if (length(RU[RU<0]) > 0) {
-              cat("WARNING: Found negative values in RU.\n")
+              warning("Found negative values in RU.\n")
             }
-            MI <- miIA
+            MI <- predIA - crossoverIA
             if (length(MI[MI<0]) > 0) {
-              cat("WARNING: Found negative values in MI.\n")
+              warning("Found negative values in MI.\n")
             }
             cat("RU: ", mean(RU),"\n")
             cat("MI: ", mean(MI), "\n")
-            if (thresh == 0.86) {
-              save(RU, file="RU85.rda")
-              save(MI, file="MI85.rda")
-            }
             
             answers$RU[answers$threshold == thresh] <- mean(RU)
             answers$MI[answers$threshold == thresh] <- mean(MI)
