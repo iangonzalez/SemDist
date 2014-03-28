@@ -141,6 +141,7 @@ find.RU.MI <- function(predIDs="", trueIDs="", ont, organism,
 ## curve based on incrementing the threshold by the chosen value.
 
 ##IDEA: ADD ... SO THEY CAN CHOOSE PLOT OPTION
+## Add ontology file input so user can determine ontology version to use
 truefile <- "MFO_LABELS.txt"
 predfiles <- "MFO_RANDOM.txt"
 ont <- "MF"
@@ -154,6 +155,8 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
     i <- 1
     IA <- clarkIA
     #IA <- getIA(organism, ont)
+    IC <- sapply(IA, sum)
+    totalI <- sum(IC)
 
     output <- list()
     
@@ -165,7 +168,7 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
     )
     Ancestor <- AnnotationDbi::as.list(get(Ancestor.name,envir=GOSemSimEnv))
     Ancestor <- Ancestor[!is.na(Ancestor)]
-
+    
     ## For each file given in predfiles:
     ## Get the predicted IDs from the file and generate a list of the IA sum for the true annotations
     ## for each relevant sequence (since this only needs to be computed once).
@@ -188,16 +191,15 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
         }
         seqtrues <- lapply(seqtrues, function(x) x[x!=""])
         ## Propagate all the true terms with all ancestors up to the root:
-        #seqtrues <- lapply(seqtrues,function(terms){
-        #  temp <- unique(c(terms, unlist(sapply(terms, function(term) { Ancestor[[term]] }))))
-        #  temp[temp != "all"]
-        #})
+        seqtrues <- lapply(seqtrues,function(terms){
+          unique(c(terms, unlist(Ancestor[terms], use.names=FALSE)))
+        })
+        seqtrues <- lapply(seqtrues, function(x) x[x != "all"])
         cat("Getting true IAs\n")
         trueIA <- sapply(seqtrues, function(trues){
           sum(IA[trues][!is.na(IA[trues])])
         })
         names(trueIA) <- seqs
-  
         
         ## Get the RU/MI data by looping through thresholds and calculating the mean RU and MI obtained for each value
         seqpreds <- as.list(rep("",length(seqs)))
@@ -207,9 +209,15 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
         names(predIA) <- seqs
         RU <- rep(0, length(trueIA))
         MI <- rep(0, length(trueIA))
+        SS <- rep(0, length(trueIA))
+        WRU <- rep(0, length(trueIA))
+        WMI <- rep(0, length(trueIA))
+        WSS <- rep(0, length(trueIA))
+
         answers <- data.frame(threshold = thresholds,   #initialize frame to hold answers
                               RU = rep(0,length(thresholds)),
-                              MI = rep(0,length(thresholds)))
+                              MI = rep(0,length(thresholds)),
+                              SS = rep(0,length(thresholds)))
 
         for (thresh in thresholds) {    
             cat("Now working on threshold: ",thresh,"\n")
@@ -237,7 +245,7 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
             
             cat("Getting IA values for predicted terms.\n")
             for (i in 1:length(seqpreds)) {
-              predIA[i] <- sum(IA[ seqpreds[[i]] ][!is.na(IA[seqpreds[[i]]])])
+              predIA[i] <- sum(IA[ seqpreds[[i]] ][!is.na(IA[ seqpreds[[i]] ])])
             }
 
             cat("Doing the same for the intersect.\n")
@@ -256,11 +264,30 @@ RUMIcurve <- function(predfiles, truefile, ont, organism, increment = 0.05,...) 
             if (length(MI[MI<0]) > 0) {
               warning("Found negative values in MI.\n")
             }
-            cat("RU: ", mean(RU),"\n")
+            SS <- crossoverIA
+            WRU <- sum(RU * IC)/totalI
+            WMI <- sum(MI * IC)/totalI
+            WSS <- sum(MI * IC)/totalI
+            precision <- sum(sapply(crossover, length)) / sum(sapply(seqpreds, length))
+            recall <- sum(sapply(crossover, length)) / sum(sapply(seqtrues, length))
+            Wprecision <- sum(crossover) / sum(predIA)
+            Wrecall <- sum(crossover) / sum(trueIA)
+            TN <- sum(sapply(seqtrues, function(x) length(seqs) - length(x)))
+            specificity <- TN/(TN + sum(sapply(seqs, function(x) length(seqpreds[[i]]) - length(crossover[[i]]))))
+            
+            cat("RU: ", mean(RU), "\n")
             cat("MI: ", mean(MI), "\n")
+            cat("SS: ", mean(SS), "\n")
+            cat("WRU: ", WRU, "\n")
+            cat("WMI: ", WMI, "\n")
+            cat("WSS: ", WSS, "\n")
+            cat("Precision: ", precision, "\n")
+            cat("Recall: ", recall, "\n")
+            cat("Specificity: ", specificity, "\n")
             
             answers$RU[answers$threshold == thresh] <- mean(RU)
             answers$MI[answers$threshold == thresh] <- mean(MI)
+            answers$SS[answers$thresholds == thresh] <- mean(SS)
             #output <- append(output, answers)
         }
 
