@@ -8,13 +8,33 @@
 
 ##----------------------------------------------------------------------------##
 
+#class definition for a tree data structure
+
+setClass("INode",
+         representation=representation(
+           key="character", nodes="list"))
+addLink <- function(root, parent, child){
+  recurse <- function(node, linkparent, linkchild) {
+    found <- FALSE
+    if (node@key==linkparent) {
+      node@nodes <- append(node@nodes, new("INode",
+                                           key=linkchild))
+      return(node)
+    } else {
+      for (i in 1:length(node@nodes)) {
+        node@nodes[i] <- recurse(node@nodes[i], linkparent, linkchild)
+      } 
+    }
+    return(node)
+  }
+  recurse(root, parent, child)
+}
+
 #The readOntology function reads in an ontology file (all parent-child links specified
 #in 2 tab delineated columns) and outputs a data frame containing the values
 readOntology <- function(ontology="ontology.txt", evcodes) {
-  myGO <- read.table(ontology, colClasses="character")
-  colnames(myGO) <- c("parents", "children")
-  myGO <- as.data.frame(myGO)
-  return(myGO)
+  root <- "GO:0003764"
+  myGO <- new("Inode", key=root, nodes=new("INodeList"))
 }
 
 
@@ -25,7 +45,6 @@ computeIA <- function(organism, ont, evcodes, specify.ont=FALSE, myont=NULL) {
 ## Read in the user's ontology if that option has been specified.
   if (specify.ont) { 
     myGO <- readOntology(myont)
-    myTerms <- unique(c(myGO$parents, myGO$children))
   }
   
 ## Get all the sequence-goid data from GO.db:
