@@ -1,6 +1,8 @@
 # Title: computeIA.R
 # Author: Ian Gonzalez, 1/2014
 # Package: SemDist
+# Contains functions: readOntology, computeIA
+
 # A method to compute the information accretion of all the GO terms 
 # for a given ontology.
 # Currently, this is a test modification of GOSemSim's computeIC function intended as a framework
@@ -8,53 +10,63 @@
 
 ##----------------------------------------------------------------------------##
 
-#class definition for a tree data structure
-
-setClass("INode",
-         representation=representation(
-           key="character", nodes="list"))
-addLink <- function(root, parent, child){
-  recurse <- function(node, linkparent, linkchild) {
-    found <- FALSE
-    if (node@key==linkparent) {
-      node@nodes <- append(node@nodes, new("INode",
-                                           key=linkchild))
-      return(node)
-    } else {
-      for (i in 1:length(node@nodes)) {
-        node@nodes[i] <- recurse(node@nodes[i], linkparent, linkchild)
-      } 
-    }
-    return(node)
-  }
-  recurse(root, parent, child)
-}
-
 #The readOntology function reads in an ontology file (all parent-child links specified
-#in 2 tab delineated columns) and outputs a tree containing the values and a term vector
-readOntology <- function(ontology="ontology.txt") {
-  myGOlinks <- read.table(ontology, colClasses = "character")
-  myGOterms <- unique(append(myGOlinks[,1], myGOlinks[,2]))
-  names(myGOlinks) <- c("parents", "children")
+#in 2 tab delineated columns) and outputs the links, the terms, a term to ancestors object
+# and a term to parents object.
+readOntology <- function(ontology="mfo_ontology.txt") {
+  myGOlinks <- read.csv(ontology, sep="|", colClasses = "character", header=FALSE)
+  myGOterms <- unique(append(myGOlinks[,1], myGOlinks[,3]))
+  names(myGOlinks) <- c("parents", "pterm", "children", "cterm")
+  myGO <- myGOlinks #this saves links so they can be returned
   for (ID in myGOlinks$parents) {
     if (!(ID %in% myGOlinks$children)) {
       root <- ID
       break
     }
   }
-  myGO <- new("Inode", key=root, nodes=list())
+  
+  Ancestor <- as.list(rep("",length(myGOterms)))
+  names(Ancestor) <- myGOterms
+  Ancestor <- lapply(Ancestor, function(x) x[x!=""])
+  
+  Parent <- as.list(rep("",length(myGOterms)))
+  names(Parent) <- myGOterms
+  Parent <- lapply(Parent, function(x) x[x!=""])
+  
   queue <- root
+  done <- 0
+  
   while (length(queue) > 0) {
-    for (i in 1:length(queue)) {
-      termchildren <- myGOlinks$children[myGOlinks$parents == queue[i]]
-      queue <- append(queue, termchildren)
-      for (child in termchildren) {
-        addLink(myGO, queue[i], child)
+    cat("Links done: ", done, "\n")
+    todo <- length(queue)
+    for (i in 1:todo) {
+      if (is.na(queue[1])) {
+        cat("missing val detected\n")
+        cat("i = ", i, "\n")
+        cat("Qlen = ", length(queue), "\n")
+        cat("Expected: ", todo, "\n")
       }
-      queue <- queue[queue != queue[i]]
+      if (queue[1] %in% Ancestor[[queue[1]]]) {
+        cat("Error: Term is an ancestor of itself\n")
+        break
+      }
+      termchildren <- myGOlinks$children[myGOlinks$parents == queue[1]]
+      myGOlinks <- myGOlinks[myGOlinks$parents != queue[1],]
+      done <- done + length(termchildren)
+      for (child in termchildren) {
+        Parent[[child]] <- append(Parent[[child]], queue[1])
+        Ancestor[[child]] <- append(Ancestor[[child]], queue[1])
+        Ancestor[[child]] <- append(Ancestor[[child]], Ancestor[[ queue[1] ]])
+      }
+      queue <- append(queue, termchildren)
+      queue <- queue[-1]
     }
   }
-  return(list(myGO, myGOterms))
+  
+  if(length(myGOlinks$children) != 0) {
+    warning("Some non-root terms did not have parents and were not included.\n")
+  }
+  return(list(myGO, myGOterms, Ancestor, Parent))
 }
 
 
@@ -69,8 +81,8 @@ computeIA <- function(organism, ont, evcodes, specify.ont=FALSE, myont=NULL,
 ## Read in the user's ontology if that option has been specified.
   if (specify.ont) { 
     GOinfo <- readOntology(myont)
-    myGO <- GOinfo[1]
-    myTerms <- GOinfo[2]
+    myGO <- GOinfo[[1]]
+    myTerms <- GOinfo[[2]]
   }
 
   ##if the annotations are given, omit all the steps of reading in term/sequence data
@@ -116,23 +128,10 @@ computeIA <- function(organism, ont, evcodes, specify.ont=FALSE, myont=NULL,
 
   ## This ends up being a list that maps sequences to their GO terms in this ont
 
-  ## Now we just need to get the Ancestor list to make sure everything is
-  ## propagated when we make our table.
+  ## Now we just need to get ancestors of every GO term to make sure everything is
+  ## propagated when we make our table. Either get it from user or from R.
     if (specify.ont) {
-      Ancestor <- as.list(rep("",length(myTerms)))
-      names(Ancestor) <- myTerms
-      queue <- myGO
-      while (length(queue) != 0) {
-        for (i in 1:length(queue)) {
-          for (subnode in queue[i]@nodes) {
-            Ancestor[[subnode@key]] <- append(Ancestor[[subnode@key],
-                                            queue[i]@key)
-            Ancestor[[subnode@key]] <- append(Ancestor[[subnode@key]],
-                                            Ancestor[[queue[i]@key]])
-            queue <- append(queue, subnode)
-          }
-        }
-      }
+      Ancestor <- GOinfo[[3]]
     } else { 
       Ancestor.name <- switch(ont,
                               MF = "GOMFANCESTOR",
@@ -143,13 +142,16 @@ computeIA <- function(organism, ont, evcodes, specify.ont=FALSE, myont=NULL,
       Ancestor <- Ancestor[!is.na(Ancestor)]
     }
     
+  ##Propagate annotations:
+  ##For each term set in the seq2term object, we append all the ancestors of each term in
+  ##the set and apply unique() to remove repeats.
+    seq2terms <- lapply(seq2terms,function(terms){
+      temp <- unique(c(terms, unlist(sapply(terms, function(term){Ancestor[[term]]}))))
+      temp[temp != "all"]
+    })
 
-  ## This Ancestor object contains a mapping of each GO term to ALL its
-  ## ancestors in the given ontology.
-
-  ## now we step through each sequence in the gomap (seq2terms object),
-  ## step through each ID for the sequence and all of its ancestors, and add the
-  ## sequence to the list mapped to each ID in a 2D array (term2seq object):
+  ## next a list of lists that maps each term to the sequences annotated with it
+  ## is created:
 
   ## Initializing the data structure:
     ## require(GO.db)
@@ -160,53 +162,29 @@ computeIA <- function(organism, ont, evcodes, specify.ont=FALSE, myont=NULL,
     goids     <- get("ALLGOID", envir=GOSemSimEnv)
     # Make sure they're unique so we don't double-count any:
     goids     <- unique(goids[goids[,"Ontology"] == ont, "go_id"])
-    # Initialize the empty list: (CONSIDER OTHER IMPLEMENTATIONS OF THE DATA)
+    # Initialize the empty list:
     term2seq  <- as.list(rep(character(1),length(goids)))
 
     names(term2seq) <- goids
-
-  ##Propagate annotations:
-  ##For each term set in the seq2term object, we append all the ancestors of each term in
-  ##the set and apply unique() to remove repeats.
-    seq2terms <- lapply(seq2terms,function(terms){
-      temp <- unique(c(terms, unlist(sapply(terms, function(term){Ancestor[[term]]}))))
-      temp[temp != "all"]
-    })
-        
-  ## Loop through sequences and update cell table with each match:
-  ## (this part will be computationally intensive)
     
+  ## Loop through sequences and update cell table with each match:    
     for (i in names(seq2terms)) {      
       #Add the sequence to each id in the list that it's annotated with:  
       term2seq[ seq2terms[[i]] ] <- lapply(term2seq[ seq2terms[[i]] ], 
                                             function(x) append(x, i))
     }
-    #this removes the empty string from each element. It's kind of a hack, 
-    #the initialization of the object should be modified so this isn't needed.
+
     for (i in 1:length(term2seq)) {
       term2seq[[i]] <- term2seq[[i]][ term2seq[[i]] != "" ]
     }
   }
 
 ## Now that we have this object, the next step is to calculate IA for each
-## term. To get the parent ocurrence count for each term, look at its parent
-## set and find the size of the intersection between their annotated sequences.
-## Then compute IA by taking -log of parent count/term count for each term.
+## term by taking -log of parent count/term count for each term:
 
   #First, Get all the parent terms for each term.
   if (specify.ont) {
-    Parents <- as.list(rep("",length(myTerms)))
-      names(Parents) <- myTerms
-      queue <- myGO
-      while (length(queue) != 0) {
-        for (i in 1:length(queue)) {
-          for (subnode in queue[i]@nodes) {
-            Parents[[subnode@key]] <- append(Parents[[subnode@key]],
-                                            queue[i]@key)
-            queue <- append(queue, subnode)
-          }
-        }
-      }
+    Parents <- GOinfo[[4]]
   } else { 
     Parents.name <- switch(ont,
                         MF = "GOMFPARENTS",
@@ -216,10 +194,8 @@ computeIA <- function(organism, ont, evcodes, specify.ont=FALSE, myont=NULL,
     Parents <- Parents[!is.na(Parents)]
   }
   
-  #Next, create the parent count list with a sapply that steps through
-  #term2seq's name object and finds the number of times the parents of each
-  #term appear together by taking the set intersect of the sets of sequences
-  #that each parent annotates.
+  #Next, a parent count list is created that counts the number of times a
+  #term's parent set annotates sequences
 
   parentcnt <- sapply(names(term2seq), 
                       function (x){ 
@@ -231,9 +207,8 @@ computeIA <- function(organism, ont, evcodes, specify.ont=FALSE, myont=NULL,
                       })
   parentcnt <- parentcnt + 1 #add a pseudocount of 1 to each count to prevent 0s
     
-
   #Now that parent count has been computed, we need only divide this by the 
-  #count for each term and take -log2 to get information accretion. 
+  #annotation count for each term and take -log2 to get information accretion. 
   
   termcnt <- sapply(term2seq, length)
   #apply a pseudocount of 1 to all terms here as well:
