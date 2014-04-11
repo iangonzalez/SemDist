@@ -1,0 +1,2 @@
+\name{computeIA}
+\alias{computeIA}
