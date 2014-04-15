@@ -72,7 +72,7 @@ readOntology <- function(ontology="mfo_ontology.txt") {
 
 #The compute IA function calculates IA values for the specified ontology (obtained
 #from built in R data).
-computeIA <- function(organism, ont, evcodes, specify.ont=FALSE, myont=NULL,
+computeIA <- function(ont, organism, evcodes="", specify.ont=FALSE, myont=NULL,
                       specify.annotations=FALSE, annotfile=NULL) {
   if (specify.annotations && !specify.ont) {
     cat("Error: Must specify ontology if annotations are being speicified.\n")
@@ -108,7 +108,7 @@ computeIA <- function(organism, ont, evcodes, specify.ont=FALSE, myont=NULL,
     gomap        <- get("gomap", envir=GOSemSimEnv)
     mapped_genes <- mappedkeys(gomap)
     gomap        <- AnnotationDbi::as.list(gomap[mapped_genes])
-    gomap        <- lapply(gomap, function(x){x[x$Evidence %in% evcodes]})
+    gomap        <- lapply(gomap, function(x){x[!(x$Evidence %in% evcodes)]})
     gomap        <- sapply(gomap, function(x) sapply(x, function(y) y$Ontology))
     
   ## Manipulate the gomap data into a more useful form:
@@ -228,6 +228,7 @@ computeIA <- function(organism, ont, evcodes, specify.ont=FALSE, myont=NULL,
   save(parentcnt,
       file=paste(paste("Parent_Count", organism, ont, sep="_"), ".rda", sep=""), 
       compress="xz")
+  return(1)
 
 }
 

@@ -165,8 +165,9 @@ findRUMI <- function(ont, organism, threshold = 0.05, truefile="", predfile="", 
 ## and information about which ontology to use and plots a (base) scatterplot that shows the RU/MI
 ## curve based on incrementing the threshold by the chosen value.
 
-RUMIcurve <- function(ont, organism, increment = 0.05, predfiles, truefile, outfile = "rumicurve.rda",
-                      add.weighted = FALSE, add.precision.recall = FALSE) {
+RUMIcurve <- function(ont, organism, increment = 0.05, predfiles, truefile, 
+                      outfile = "rumicurve.rda", add.weighted = FALSE, 
+                      add.prec.rec = FALSE) {
     thresholds <- seq(1-increment, increment, -1*increment)    ## Create the sequence of thresholds to loop over
     trueIDs <- getTrues(truefile)                           ## Read in data from given files if from file
     
@@ -230,7 +231,7 @@ RUMIcurve <- function(ont, organism, increment = 0.05, predfiles, truefile, outf
                                 RU = rep(0,length(thresholds)),
                                 MI = rep(0,length(thresholds)),
                                 SS = rep(0,length(thresholds)))
-        } else if (!add.precision.recall) {
+        } else if (!add.prec.rec) {
           answers <- data.frame(threshold = thresholds,
                                 RU = rep(0,length(thresholds)),
                                 MI = rep(0,length(thresholds)),
@@ -315,7 +316,7 @@ RUMIcurve <- function(ont, organism, increment = 0.05, predfiles, truefile, outf
               answers$WMI[answers$threshold == thresh] <- WMI
               answers$WSS[answers$thresholds == thresh] <- WSS
             }
-            if (add.precision.recall) {
+            if (add.prec.rec) {
               answers$precision[answers$threshold == thresh] <- precision
               answers$recall[answers$threshold == thresh] <- recall
               answers$specificity[answers$thresholds == thresh] <- specificity
