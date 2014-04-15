@@ -1,6 +1,8 @@
 \name{findRUMI}
 \alias{findRUMI}
-\title{findRUMI}
+\title{
+Information accretion based predictor assessment
+}
 
 \description{
   Reads in a file containing the true terms annotating a set of sequences and a file
@@ -32,4 +34,17 @@ findRUMI(ont, organism, threshold = 0.05, truefile="trues.txt",
 
 \value{
   A data frame containing the RU and MI values for each sequence in the file.
+}
+\references{
+%% ~put references to the literature/web site here ~
+}
+
+\author{
+Ian Gonzalez and Wyatt Clark
+}
+
+\seealso{
+\code{\link{computeIA}}
+\code{\link{RUMIcurve}}
+\code{\link{SemDist}}
 }
