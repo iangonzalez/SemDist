@@ -74,6 +74,9 @@ readOntology <- function(ontology="mfo_ontology.txt") {
 #from built in R data).
 computeIA <- function(ont, organism, evcodes="", specify.ont=FALSE, myont=NULL,
                       specify.annotations=FALSE, annotfile=NULL) {
+  
+  
+  
   if (specify.annotations && !specify.ont) {
     cat("Error: Must specify ontology if annotations are being speicified.\n")
     return(0)
@@ -103,9 +106,8 @@ computeIA <- function(ont, organism, evcodes="", specify.ont=FALSE, myont=NULL,
   } else {
   ## Otherwise, get the data from R packages:
   ## Get all the sequence-goid data from GO.db:
-
     loadGOMap(organism) ##method from gene2GO.R (GOSemSim)
-    gomap        <- get("gomap", envir=GOSemSimEnv)
+    gomap        <- get("gomap", envir=SemDistEnv)
     mapped_genes <- mappedkeys(gomap)
     gomap        <- AnnotationDbi::as.list(gomap[mapped_genes])
     gomap        <- lapply(gomap, function(x){x[!(x$Evidence %in% evcodes)]})
@@ -138,7 +140,7 @@ computeIA <- function(ont, organism, evcodes="", specify.ont=FALSE, myont=NULL,
                               BP = "GOBPANCESTOR",
                               CC = "GOCCANCESTOR"
       )
-      Ancestor <- AnnotationDbi::as.list(get(Ancestor.name,envir=GOSemSimEnv))
+      Ancestor <- AnnotationDbi::as.list(get(Ancestor.name,envir=SemDistEnv))
       Ancestor <- Ancestor[!is.na(Ancestor)]
     }
     
@@ -155,11 +157,11 @@ computeIA <- function(ont, organism, evcodes="", specify.ont=FALSE, myont=NULL,
 
   ## Initializing the data structure:
     ## require(GO.db)
-    if ( !exists("ALLGOID", envir=GOSemSimEnv) ) {
-      assign("ALLGOID", toTable(GOTERM), envir=GOSemSimEnv )
+    if ( !exists("ALLGOID", envir=SemDistEnv) ) {
+      assign("ALLGOID", toTable(GOTERM), envir=SemDistEnv )
     }
     # Get all the possible terms:
-    goids     <- get("ALLGOID", envir=GOSemSimEnv)
+    goids     <- get("ALLGOID", envir=SemDistEnv)
     # Make sure they're unique so we don't double-count any:
     goids     <- unique(goids[goids[,"Ontology"] == ont, "go_id"])
     # Initialize the empty list:
@@ -190,7 +192,7 @@ computeIA <- function(ont, organism, evcodes="", specify.ont=FALSE, myont=NULL,
                         MF = "GOMFPARENTS",
                         BP = "GOBPPARENTS",
                         CC = "GOCCPARENTS")
-    Parents <- AnnotationDbi::as.list(get(Parents.name,envir=GOSemSimEnv))
+    Parents <- AnnotationDbi::as.list(get(Parents.name,envir=SemDistEnv))
     Parents <- Parents[!is.na(Parents)]
   }
   

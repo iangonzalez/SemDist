@@ -12,14 +12,10 @@
 ##----------------------------------------------------------------------------------------##
 
 ## function to load information accretion data into the environment.
-setwd("~/Documents/Ian/SemDist")
-source('gene2GO.R')
-source('utilities.R')
-
 
 
 loadIA <- function(organism,ont) { ##taken from GOSemSim, dont get it yet
-	if(!exists("ICEnv")) .initial() 
+	if(!exists("IAEnv")) .initial() 
 	fname <- paste("Info_Accretion",
                    organism,
                    ont,
@@ -39,14 +35,14 @@ loadIA <- function(organism,ont) { ##taken from GOSemSim, dont get it yet
                         sep="")
     assign(eval(org.ont.IA),
            IA,
-           envir=ICEnv) ## At some point change the name of this Env (maybe IAEnv)
+           envir=IAEnv) ## At some point change the name of this Env (maybe IAEnv)
     rm(IA)
 }
 
 ## function to get information accretion data from the environment
 
 getIA <- function(organism, ont) { ##also lifted from GOSemSim
-    if(!exists("ICEnv")) {
+    if(!exists("IAEnv")) {
         .initial()
     }
 
@@ -55,10 +51,10 @@ getIA <- function(organism, ont) { ##also lifted from GOSemSim
                         "IA",
                         sep="")
 
-    if(!exists(org.ont.IA, envir=ICEnv)) {
+    if(!exists(org.ont.IA, envir=IAEnv)) {
         loadIA(organism, ont)
     }
-    IA <- get(org.ont.IA, envir=ICEnv)
+    IA <- get(org.ont.IA, envir=IAEnv)
     return(IA)
 }
 
@@ -107,7 +103,7 @@ findRUMI <- function(ont, organism, threshold = 0.05, truefile="", predfile="", 
                             BP = "GOBPANCESTOR",
                             CC = "GOCCANCESTOR"
     )
-    Ancestor <- AnnotationDbi::as.list(get(Ancestor.name,envir=GOSemSimEnv))
+    Ancestor <- AnnotationDbi::as.list(get(Ancestor.name,envir=SemDistEnv))
     Ancestor <- Ancestor[!is.na(Ancestor)]
 
     ## For each sequence, find its true and predicted terms, find their intersection,
@@ -184,7 +180,7 @@ RUMIcurve <- function(ont, organism, increment = 0.05, predfiles, truefile,
                             BP = "GOBPANCESTOR",
                             CC = "GOCCANCESTOR"
     )
-    Ancestor <- AnnotationDbi::as.list(get(Ancestor.name,envir=GOSemSimEnv))
+    Ancestor <- AnnotationDbi::as.list(get(Ancestor.name,envir=SemDistEnv))
     Ancestor <- Ancestor[!is.na(Ancestor)]
     
     ## For each file given in predfiles:
@@ -294,13 +290,13 @@ RUMIcurve <- function(ont, organism, increment = 0.05, predfiles, truefile,
             MI <- predIA - crossoverIA
 
             SS <- crossoverIA
-            WRU <- sum(RU * IC)/totalI
-            WMI <- sum(MI * IC)/totalI
-            WSS <- sum(MI * IC)/totalI
+            WRU <- sum(RU * trueIA)/totalI ## for wwprecision replace RU
+            WMI <- sum(MI * trueIA)/totalI ## with Wprecision
+            WSS <- sum(MI * trueIA)/totalI
             precision <- sum(sapply(crossover, length)) / sum(sapply(seqpreds, length))
             recall <- sum(sapply(crossover, length)) / sum(sapply(seqtrues, length))
-            Wprecision <- sum(crossover) / sum(predIA)
-            Wrecall <- sum(crossover) / sum(trueIA)
+            Wprecision <- SS / predIA
+            Wrecall <- SS / trueIA
             TN <- sum(sapply(seqtrues, function(x) length(seqs) - length(x)))
             specificity <- TN/(TN + sum(sapply(seqs, function(x) length(seqpreds[[i]]) - length(crossover[[i]]))))
             
@@ -332,11 +328,11 @@ RUMIcurve <- function(ont, organism, increment = 0.05, predfiles, truefile,
 }
 
 #Final testing: (REMOVE BEFORE SHIPPING)
-ont = "MF"
-organism = "human"
-predfiles = "MFO_BLAST.txt"
-clarkIA <- read.table("MFO_IA.txt",colClasses="character")
-clarkIA2 <- as.numeric(clarkIA[,2])
-names(clarkIA2) <- clarkIA[,1]
-clarkIA <- clarkIA2
-IA <- clarkIA
+#ont = "MF"
+#organism = "human"
+#predfiles = "MFO_BLAST.txt"
+#clarkIA <- read.table("MFO_IA.txt",colClasses="character")
+#clarkIA2 <- as.numeric(clarkIA[,2])
+#names(clarkIA2) <- clarkIA[,1]
+#clarkIA <- clarkIA2
+#IA <- clarkIA

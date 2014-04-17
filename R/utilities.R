@@ -1,9 +1,10 @@
 ##From GOSemSim package
 
 .initial <- function() {
-    assign("GOSemSimEnv", new.env(),.GlobalEnv)
+    #evironment names changed from GOSemSimEnv, ICEnv
+    assign("SemDistEnv", new.env(),.GlobalEnv)
     assign("SemSimCache", new.env(), .GlobalEnv)
-    assign("ICEnv", new.env(), .GlobalEnv)
+    assign("IAEnv", new.env(), .GlobalEnv)
     assign("SupportedSpecies", c("anopheles",
                                  "arabidopsis",
                                  "bovine",
@@ -23,7 +24,7 @@
                                  "xenopus",
                                  "yeast",
                                  "zebrafish"),
-           envir=GOSemSimEnv)
+           envir=SemDistEnv)
     ## remove "coelicolor" as it is not supported by Bioconductor
 }
 

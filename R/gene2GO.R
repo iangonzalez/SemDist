@@ -55,18 +55,18 @@ loadGOMap_internal <- function(organism){
                     zebrafish    = "org.Dr.egGO",
                     )
     gomap <- eval(parse(text=gomap))
-    assign("gomap", gomap, envir=GOSemSimEnv)
-    assign("gomap.flag", organism, envir=GOSemSimEnv)
+    assign("gomap", gomap, envir=SemDistEnv)
+    assign("gomap.flag", organism, envir=SemDistEnv)
 }
 
 ##' @importMethodsFrom AnnotationDbi exists
 ##' @importMethodsFrom AnnotationDbi get
 loadGOMap <- function(organism) {
-    if(!exists("GOSemSimEnv")) .initial()
-    if (!exists("gomap", envir=GOSemSimEnv)) {
+    if(!exists("SemDistEnv")) .initial()
+    if (!exists("gomap", envir=SemDistEnv)) {
         loadGOMap_internal(organism)
     } else {
-        flag <- get("gomap.flag", envir=GOSemSimEnv)
+        flag <- get("gomap.flag", envir=SemDistEnv)
         if (flag != organism)
             loadGOMap_internal(organism)
     }
@@ -76,7 +76,7 @@ loadGOMap <- function(organism) {
 gene2GO <- function(gene, organism, ont, dropCodes) {
     gene <- as.character(gene)
     loadGOMap(organism)
-    gomap <- get("gomap", envir=GOSemSimEnv)
+    gomap <- get("gomap", envir=SemDistEnv)
     go <- gomap[[gene]]
 
     if (all(is.na(go)))
