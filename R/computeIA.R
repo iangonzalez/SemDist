@@ -35,9 +35,11 @@ readOntology <- function(ontology="mfo_ontology.txt") {
   
   queue <- root
   done <- 0
+  cat("Reading ontology links\n")
+  progress <- txtProgressBar(0, length(myGOlinks[, 1]))
   
   while (length(queue) > 0) {
-    cat("Links done: ", done, "\n")
+    setTxtProgressBar(progress, done)
     todo <- length(queue)
     for (i in 1:todo) {
       if (is.na(queue[1])) {
@@ -81,13 +83,13 @@ computeIA <- function(ont, organism, evcodes="", specify.ont=FALSE, myont=NULL,
     cat("Error: Must specify ontology if annotations are being speicified.\n")
     return(0)
   }
-## Read in the user's ontology if that option has been specified.
+  ## Read in the user's ontology if that option has been specified.
   if (specify.ont) { 
     GOinfo <- readOntology(myont)
     myGO <- GOinfo[[1]]
     myTerms <- GOinfo[[2]]
   }
-
+  
   ##if the annotations are given, omit all the steps of reading in term/sequence data
   ##and propogating that data
   if (specify.annotations) {  
@@ -98,14 +100,14 @@ computeIA <- function(ont, organism, evcodes="", specify.ont=FALSE, myont=NULL,
     names(term2seq) <- goids
     for (ID in goids) {
       term2seq[ID] <- append(term2seq[ID],
-                              myannot$sequences[myannot$GOids == ID])
+                             myannot$sequences[myannot$GOids == ID])
     }
-
-
-
+    
+    
+    
   } else {
-  ## Otherwise, get the data from R packages:
-  ## Get all the sequence-goid data from GO.db:
+    ## Otherwise, get the data from R packages:
+    ## Get all the sequence-goid data from GO.db:
     loadGOMap(organism) ##method from gene2GO.R (GOSemSim)
     gomap        <- get("gomap", envir=SemDistEnv)
     mapped_genes <- mappedkeys(gomap)
@@ -113,8 +115,8 @@ computeIA <- function(ont, organism, evcodes="", specify.ont=FALSE, myont=NULL,
     gomap        <- lapply(gomap, function(x){x[!(x$Evidence %in% evcodes)]})
     gomap        <- sapply(gomap, function(x) sapply(x, function(y) y$Ontology))
     
-  ## Manipulate the gomap data into a more useful form:
-
+    ## Manipulate the gomap data into a more useful form:
+    
     seq2terms <- sapply(gomap, function(x) {names(x[x==ont])})
     ##seq2terms <- seq2terms[length(seq2terms)==0]
     ##seq2terms <- sapply(gomap, function(x) {names(x[x==ont])})  ##READ THIS: THESE LINES ARE LIKELY REMOVABLE
@@ -127,11 +129,11 @@ computeIA <- function(ont, organism, evcodes="", specify.ont=FALSE, myont=NULL,
     seq2terms <- seq2terms[sapply(seq2terms, function(x) {if (length(x)==0) {FALSE} else {TRUE}})]
     
     
-
-  ## This ends up being a list that maps sequences to their GO terms in this ont
-
-  ## Now we just need to get ancestors of every GO term to make sure everything is
-  ## propagated when we make our table. Either get it from user or from R.
+    
+    ## This ends up being a list that maps sequences to their GO terms in this ont
+    
+    ## Now we just need to get ancestors of every GO term to make sure everything is
+    ## propagated when we make our table. Either get it from user or from R.
     if (specify.ont) {
       Ancestor <- GOinfo[[3]]
     } else { 
@@ -144,18 +146,18 @@ computeIA <- function(ont, organism, evcodes="", specify.ont=FALSE, myont=NULL,
       Ancestor <- Ancestor[!is.na(Ancestor)]
     }
     
-  ##Propagate annotations:
-  ##For each term set in the seq2term object, we append all the ancestors of each term in
-  ##the set and apply unique() to remove repeats.
+    ##Propagate annotations:
+    ##For each term set in the seq2term object, we append all the ancestors of each term in
+    ##the set and apply unique() to remove repeats.
     seq2terms <- lapply(seq2terms,function(terms){
       temp <- unique(c(terms, unlist(sapply(terms, function(term){Ancestor[[term]]}))))
       temp[temp != "all"]
     })
-
-  ## next a list of lists that maps each term to the sequences annotated with it
-  ## is created:
-
-  ## Initializing the data structure:
+    
+    ## next a list of lists that maps each term to the sequences annotated with it
+    ## is created:
+    
+    ## Initializing the data structure:
     ## require(GO.db)
     if ( !exists("ALLGOID", envir=SemDistEnv) ) {
       assign("ALLGOID", toTable(GOTERM), envir=SemDistEnv )
@@ -166,39 +168,39 @@ computeIA <- function(ont, organism, evcodes="", specify.ont=FALSE, myont=NULL,
     goids     <- unique(goids[goids[,"Ontology"] == ont, "go_id"])
     # Initialize the empty list:
     term2seq  <- as.list(rep(character(1),length(goids)))
-
+    
     names(term2seq) <- goids
     
-  ## Loop through sequences and update cell table with each match:    
+    ## Loop through sequences and update cell table with each match:    
     for (i in names(seq2terms)) {      
       #Add the sequence to each id in the list that it's annotated with:  
       term2seq[ seq2terms[[i]] ] <- lapply(term2seq[ seq2terms[[i]] ], 
-                                            function(x) append(x, i))
+                                           function(x) append(x, i))
     }
-
+    
     for (i in 1:length(term2seq)) {
       term2seq[[i]] <- term2seq[[i]][ term2seq[[i]] != "" ]
     }
   }
-
-## Now that we have this object, the next step is to calculate IA for each
-## term by taking -log of parent count/term count for each term:
-
+  
+  ## Now that we have this object, the next step is to calculate IA for each
+  ## term by taking -log of parent count/term count for each term:
+  
   #First, Get all the parent terms for each term.
   if (specify.ont) {
     Parents <- GOinfo[[4]]
   } else { 
     Parents.name <- switch(ont,
-                        MF = "GOMFPARENTS",
-                        BP = "GOBPPARENTS",
-                        CC = "GOCCPARENTS")
+                           MF = "GOMFPARENTS",
+                           BP = "GOBPPARENTS",
+                           CC = "GOCCPARENTS")
     Parents <- AnnotationDbi::as.list(get(Parents.name,envir=SemDistEnv))
     Parents <- Parents[!is.na(Parents)]
   }
   
   #Next, a parent count list is created that counts the number of times a
   #term's parent set annotates sequences
-
+  
   parentcnt <- sapply(names(term2seq), 
                       function (x){ 
                         seqs <- term2seq[[ Parents[[x]][1] ]]
@@ -208,7 +210,7 @@ computeIA <- function(ont, organism, evcodes="", specify.ont=FALSE, myont=NULL,
                         length(seqs)
                       })
   parentcnt <- parentcnt + 1 #add a pseudocount of 1 to each count to prevent 0s
-    
+  
   #Now that parent count has been computed, we need only divide this by the 
   #annotation count for each term and take -log2 to get information accretion. 
   
@@ -217,7 +219,7 @@ computeIA <- function(ont, organism, evcodes="", specify.ont=FALSE, myont=NULL,
   termcnt <- termcnt + 1
   #sets parent count of root term to #terms so its probability will be 1:
   parentcnt[termcnt==max(termcnt)] <- max(termcnt) 
-    
+  
   #Calculate conditional probability, IA for all terms:
   pcond <- termcnt/parentcnt 
   IAccr   <- -log2(pcond)
@@ -228,10 +230,10 @@ computeIA <- function(ont, organism, evcodes="", specify.ont=FALSE, myont=NULL,
        file=paste(paste("Term_Count", organism, ont, sep="_"), ".rda", sep=""), 
        compress="xz")
   save(parentcnt,
-      file=paste(paste("Parent_Count", organism, ont, sep="_"), ".rda", sep=""), 
-      compress="xz")
+       file=paste(paste("Parent_Count", organism, ont, sep="_"), ".rda", sep=""), 
+       compress="xz")
   return(1)
-
+  
 }
 
 ##---------------------------------------------------------------### -IG
