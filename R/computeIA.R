@@ -77,10 +77,8 @@ readOntology <- function(ontology="mfo_ontology.txt") {
 computeIA <- function(ont, organism, evcodes="", specify.ont=FALSE, myont=NULL,
                       specify.annotations=FALSE, annotfile=NULL) {
   
-  
-  
   if (specify.annotations && !specify.ont) {
-    cat("Error: Must specify ontology if annotations are being speicified.\n")
+    cat("Error: Must specify ontology if annotations are being specified.\n")
     return(0)
   }
   ## Read in the user's ontology if that option has been specified.
@@ -112,14 +110,15 @@ computeIA <- function(ont, organism, evcodes="", specify.ont=FALSE, myont=NULL,
     gomap        <- get("gomap", envir=SemDistEnv)
     mapped_genes <- mappedkeys(gomap)
     gomap        <- AnnotationDbi::as.list(gomap[mapped_genes])
-    gomap        <- lapply(gomap, function(x){x[!(x$Evidence %in% evcodes)]})
+
+    #gomap        <- lapply(gomap, function(x){x[!(x$Evidence %in% evcodes)]})
     gomap        <- sapply(gomap, function(x) sapply(x, function(y) y$Ontology))
     
     ## Manipulate the gomap data into a more useful form:
-    
     seq2terms <- sapply(gomap, function(x) {names(x[x==ont])})
-    ##seq2terms <- seq2terms[length(seq2terms)==0]
-    ##seq2terms <- sapply(gomap, function(x) {names(x[x==ont])})  ##READ THIS: THESE LINES ARE LIKELY REMOVABLE
+
+    #seq2terms <- seq2terms[length(seq2terms)==0]
+    #seq2terms <- sapply(gomap, function(x) {names(x[x==ont])})  ##READ THIS: THESE LINES ARE LIKELY REMOVABLE
     
     #If ontology has been specified remove any terms that don't appear in it
     if (specify.ont) {
@@ -127,9 +126,7 @@ computeIA <- function(ont, organism, evcodes="", specify.ont=FALSE, myont=NULL,
     }
     
     seq2terms <- seq2terms[sapply(seq2terms, function(x) {if (length(x)==0) {FALSE} else {TRUE}})]
-    
-    
-    
+
     ## This ends up being a list that maps sequences to their GO terms in this ont
     
     ## Now we just need to get ancestors of every GO term to make sure everything is
@@ -153,7 +150,7 @@ computeIA <- function(ont, organism, evcodes="", specify.ont=FALSE, myont=NULL,
       temp <- unique(c(terms, unlist(sapply(terms, function(term){Ancestor[[term]]}))))
       temp[temp != "all"]
     })
-    
+
     ## next a list of lists that maps each term to the sequences annotated with it
     ## is created:
     
@@ -177,7 +174,7 @@ computeIA <- function(ont, organism, evcodes="", specify.ont=FALSE, myont=NULL,
       term2seq[ seq2terms[[i]] ] <- lapply(term2seq[ seq2terms[[i]] ], 
                                            function(x) append(x, i))
     }
-    
+
     for (i in 1:length(term2seq)) {
       term2seq[[i]] <- term2seq[[i]][ term2seq[[i]] != "" ]
     }
@@ -232,7 +229,6 @@ computeIA <- function(ont, organism, evcodes="", specify.ont=FALSE, myont=NULL,
   save(parentcnt,
        file=paste(paste("Parent_Count", organism, ont, sep="_"), ".rda", sep=""), 
        compress="xz")
-  return(1)
   
 }
 

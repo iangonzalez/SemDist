@@ -12,39 +12,67 @@
 ##----------------------------------------------------------------------------------------##
 
 ## function to load information accretion data into the environment.
-
-
-loadIA <- function(organism,ont) {
+## Accepts single organism or a char vector of them
+loadIA <- function(organism, ont) {
   if(!exists("IAEnv")) .initial() 
-  fname <- paste("Info_Accretion",
-                 organism,
-                 ont,
-                 sep="_")
-  if (ont == "DO") {
-    tryCatch(utils::data(list=fname,
-                         package="DOSE"))
+  if (length(organism) == 1) {
+    fname <- paste("Info_Accretion",
+                   organism,
+                   ont,
+                   sep="_")
+    tryCatch(data(list=fname, envir=environment()))
+    IA <- get("IAccr")
+    org.ont.IA <- paste(organism,
+                        ont,
+                        "IA",
+                        sep="")
+    assign(eval(org.ont.IA),
+           IA,
+           envir=IAEnv)
+    rm(IA)
+    
   } else {
-    tryCatch(utils::data(list=fname, envir=environment())) 
-  }
-  IA <- get("IAccr")
-  org.ont.IA <- paste(organism,
+    for (i in 1:length(organism)) {
+      fname1 <- paste("Term_Count",
+                      organism[i],
                       ont,
-                      "IA",
-                      sep="")
-  assign(eval(org.ont.IA),
-         IA,
-         envir=IAEnv)
-  rm(IA)
+                      sep="_")
+      fname2 <- paste("Parent_Count",
+                      organism[i],
+                      ont,
+                      sep="_")
+      tryCatch(data(list=fname1, envir=environment()))
+      tryCatch(data(list=fname2, envir=environment()))
+      if (i == 1) {
+        pcount <- parentcnt
+        tcount <- termcnt
+      } else {
+        pcount <- pcount + parentcnt
+        tcount <- tcount + termcnt
+      }
+    }
+    
+    pcond <- tcount/pcount
+    IA <- -log2(pcond)
+    org.ont.IA <- paste(paste(organism, collapse=""),
+                        ont,
+                        "IA",
+                        sep="")
+    assign(eval(org.ont.IA),
+           IA,
+           envir=IAEnv)
+    rm(IA)
+  }
 }
 
 ## function to get information accretion data from the environment
-
-getIA <- function(organism, ont) { ##also lifted from GOSemSim
+## Accepts single organism or a char vector of them
+getIA <- function(organism, ont) {
   if(!exists("IAEnv")) {
     .initial()
   }
   
-  org.ont.IA <- paste(organism,
+  org.ont.IA <- paste(paste(organism, collapse=""),
                       ont,
                       "IA",
                       sep="")
@@ -82,14 +110,23 @@ getTrues <- function(filename) {
 ## If seqtrueIAs is set to a vector of values >= 0, the function will treat these as the sums of the true
 ## terms for each sequence (otherwise it will calculate this on its own).
 
-findRUMI <- function(ont, organism, threshold = 0.05, truefile="", predfile="", outfile="rumi.rda") {
+findRUMI <- function(ont, organism, threshold = 0.05, 
+                     truefile="", predfile="", IAfile=NULL, outfile="rumi.rda") {
   trueIDs <- getTrues(truefile)       ##Read in data from given files
   predIDs <- getPredictions(predfile)
   
   seqs    <- unique(append(predIDs$seqids,trueIDs$seqids))   ##Get list of sequences whose annotations have been predicted
   predIDs <- predIDs[predIDs$scores > threshold,]   ## Remove predictions below the threshold
-  IA      <- getIA(organism, ont)
-  #IA <- clarkIA
+  if (is.null(IAfile)) {
+    IA <- getIA(organism, ont)
+  } else {
+    load(IAfile)
+    if (exists("IAccr")) {
+      IA <- get("IAccr")
+    } else if (!exists("IA")) {
+      stop("Specified IA data must be saved as 'IA' or 'IAccr' .rda file\n")
+    }
+  }
   
   ## Get all GO term ancestors for later propagation step:
   Ancestor.name <- switch(ont,
@@ -161,13 +198,23 @@ findRUMI <- function(ont, organism, threshold = 0.05, truefile="", predfile="", 
 ## indicators (weighted RUMI, prec/recall) to be output if needed.
 
 RUMIcurve <- function(ont, organism, increment = 0.05, predfiles, truefile, 
-                      outfile = "rumicurve.rda", add.weighted = FALSE, 
+                      IAfile = NULL, outfile = "rumicurve.rda", add.weighted = FALSE, 
                       add.prec.rec = FALSE) {
   thresholds <- seq(1-increment, increment, -1*increment)    ## Create the sequence of thresholds to loop over
   trueIDs <- getTrues(truefile)                           ## Read in data from given files if from file
   
-  IA <- getIA(organism, ont)
-  #IA <- clarkIA
+  #Get IA data, from R and getIA function if IAfile is null,
+  #from specified .rda file otherwise. Must be called "IA" or "IAccr"
+  if (is.null(IAfile)) {
+    IA <- getIA(organism, ont)
+  } else {
+    load(IAfile)
+    if (exists("IAccr")) {
+      IA <- get("IAccr")
+    } else if (!exists("IA")) {
+      stop("Specified IA data must be saved as 'IA' or 'IAccr' .rda file\n")
+    }
+  }
   IC <- sapply(IA, sum)
   totalI <- sum(IC)
   
@@ -335,6 +382,7 @@ if (FALSE) {
 ont = "MF"
 organism = "human"
 predfiles = "MFO_BLAST.txt"
+truefile = "MFO_LABELS.txt"
 clarkIA <- read.table("MFO_IA.txt",colClasses="character")
 clarkIA2 <- as.numeric(clarkIA[,2])
 names(clarkIA2) <- clarkIA[,1]
