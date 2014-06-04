@@ -1,12 +1,10 @@
 # Title: computeIA.R
-# Author: Ian Gonzalez, 1/2014
+# Author: Ian Gonzalez, 1/2014, gonzalez.isv@gmail.com
 # Package: SemDist
 # Contains functions: readOntology, computeIA
 
 # A method to compute the information accretion of all the GO terms 
 # for a given ontology.
-# Currently, this is a test modification of GOSemSim's computeIC function intended as a framework
-# within which to test my method. All changes from the original marked and explained with comments.
 
 ##----------------------------------------------------------------------------##
 
@@ -74,12 +72,11 @@ readOntology <- function(ontology="mfo_ontology.txt") {
 
 #The compute IA function calculates IA values for the specified ontology (obtained
 #from built in R data).
-computeIA <- function(ont, organism, evcodes="", specify.ont=FALSE, myont=NULL,
+computeIA <- function(ont, organism, evcodes=NULL, specify.ont=FALSE, myont=NULL,
                       specify.annotations=FALSE, annotfile=NULL) {
   
   if (specify.annotations && !specify.ont) {
-    cat("Error: Must specify ontology if annotations are being specified.\n")
-    return(0)
+    stop("Error: Must specify ontology if annotations are being specified.\n")
   }
   ## Read in the user's ontology if that option has been specified.
   if (specify.ont) { 
@@ -102,7 +99,6 @@ computeIA <- function(ont, organism, evcodes="", specify.ont=FALSE, myont=NULL,
     }
     
     
-    
   } else {
     ## Otherwise, get the data from R packages:
     ## Get all the sequence-goid data from GO.db:
@@ -110,8 +106,21 @@ computeIA <- function(ont, organism, evcodes="", specify.ont=FALSE, myont=NULL,
     gomap        <- get("gomap", envir=SemDistEnv)
     mapped_genes <- mappedkeys(gomap)
     gomap        <- AnnotationDbi::as.list(gomap[mapped_genes])
-
-    #gomap        <- lapply(gomap, function(x){x[!(x$Evidence %in% evcodes)]})
+    
+    # If the evcodes arg was specified, any annotations with those
+    # evidence codes are removed from the list
+    if (!is.null(evcodes)) {
+      test <- lapply(gomap, function(x){
+        correct_ev = rep(TRUE, length(x))
+        for (i in 1:length(x)){
+          if (x[[i]]$Evidence %in% evcodes) {
+            correct_ev[i] = FALSE
+          }
+        }
+        x[correct_ev]
+      })
+    }
+    
     gomap        <- sapply(gomap, function(x) sapply(x, function(y) y$Ontology))
     
     ## Manipulate the gomap data into a more useful form:
@@ -200,6 +209,9 @@ computeIA <- function(ont, organism, evcodes="", specify.ont=FALSE, myont=NULL,
   
   parentcnt <- sapply(names(term2seq), 
                       function (x){ 
+                        if (!(x %in% names(Parents))) {
+                          return(0)
+                        }
                         seqs <- term2seq[[ Parents[[x]][1] ]]
                         for (i in Parents[[x]]) {
                           seqs <- intersect(seqs, term2seq[[i]])
