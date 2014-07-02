@@ -134,8 +134,6 @@ computeIA <- function(ont, organism, evcodes=NULL, specify.ont=FALSE, myont=NULL
       seq2terms <- sapply(seq2terms, function(x) { x[x %in% myTerms] })
     }
     
-    seq2terms <- seq2terms[sapply(seq2terms, function(x) {if (length(x)==0) {FALSE} else {TRUE}})]
-
     ## This ends up being a list that maps sequences to their GO terms in this ont
     
     ## Now we just need to get ancestors of every GO term to make sure everything is

@@ -1,5 +1,5 @@
 # Title: findRuMi.R
-# Author: Ian Gonzalez, 2/2014
+# Author: Ian Gonzalez, 2/2014, gonzalez.isv@gmail.com
 # Package: SemDist
 # Packages required: GO.db
 # Contains functions: loadIA, getIA, findRUMI, RUMIcurve, getPredicitons, getTrues
@@ -14,7 +14,9 @@
 ## function to load information accretion data into the environment.
 ## Accepts single organism or a char vector of them
 loadIA <- function(organism, ont) {
-  if(!exists("IAEnv")) .initial() 
+  termcnt <- NULL
+  parentcnt <- NULL
+  if(!exists("IAEnv")) .initial()
   if (length(organism) == 1) {
     fname <- paste("Info_Accretion",
                    organism,
@@ -178,9 +180,9 @@ findRUMI <- function(ont, organism, threshold = 0.05,
   crossover <- sapply(seqs, function(seq) {
     intersect(seqtrues[[seq]],seqpreds[[seq]])
   })
-  cat(length(crossover),"\n")
+
   crossoverIA <- sapply(crossover,function(int) sum(IA[int][!is.na(IA[int])]))
-  cat(length(crossoverIA),"\n")
+
   cat("Calculating RU, MI\n")
   RU <- trueIA - crossoverIA
   MI <- predIA - crossoverIA
@@ -197,7 +199,7 @@ findRUMI <- function(ont, organism, threshold = 0.05,
 ## Thresholds are tried from 0 to 1 in steps indicated by increment. The add options allow for more
 ## indicators (weighted RUMI, prec/recall) to be output if needed.
 
-RUMIcurve <- function(ont, organism, increment = 0.05, predfiles, truefile, 
+RUMIcurve <- function(ont, organism, increment = 0.05, truefile, predfiles,
                       IAfile = NULL, outfile = "rumicurve.rda", add.weighted = FALSE, 
                       add.prec.rec = FALSE) {
   thresholds <- seq(1-increment, increment, -1*increment)    ## Create the sequence of thresholds to loop over
@@ -370,7 +372,7 @@ RUMIcurve <- function(ont, organism, increment = 0.05, predfiles, truefile,
         answers$Wrecall[answers$thresholds == thresh] <- Wrecall
       }
     }
-    output <- append(output, answers)
+    output <- append(output, list(answers))
   }
   names(output) <- predfiles
   save(output, file = outfile)
