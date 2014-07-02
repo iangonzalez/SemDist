@@ -5,11 +5,10 @@ Compute information accretion for an ontology
 }
 \description{
 Calculates information accretion for each term in the specified ontology using either user
--specified data or the sequence annotations for the organisms specified (data obtained from
-annotate package).
+-specified data or the sequence annotations for the organisms specified (note that organism-specific pacakges must be downloaded separately. See "note" section).
 }
 \usage{
-computeIA(ont, organism, evcodes = "", specify.ont = FALSE, 
+computeIA(ont, organism, evcodes = NULL, specify.ont = FALSE, 
           myont = NULL, specify.annotations = FALSE, 
           annotfile = NULL)
 }
@@ -21,10 +20,12 @@ computeIA(ont, organism, evcodes = "", specify.ont = FALSE,
   \item{organism}{A character vector indicating which organism's annotation data to use.}
   \item{evcodes}{A character vector specifying which evidence codes to ignore in the ontology
                 data. Defaults to none.}
-  \item{specify.ont}{A boolean indicating whether the user wants to specify their own version
+  \item{specify.ont}{
+  A boolean indicating whether the user wants to specify their own version
                       of the ontology.}
-  \item{myont}{Character object indicating what file to read in the specified ontology from.
-               The ontology should be specified as a pipe-delimited (| symbol) file with 4
+  \item{myont}{
+  Character object indicating what file to read in the specified ontology from. 
+  The ontology should be specified as a pipe-delimited (| symbol) file with 4
                columns. The first column contains all parent term accessions and the third column
                contains all child term accessions. Each row should represent a parent-child
                link. Every link in the ontology should be specified. The 2nd and 4th columns
@@ -38,14 +39,52 @@ computeIA(ont, organism, evcodes = "", specify.ont = FALSE,
                     as the sequences they annotate.}
 }
 \value{
-Returns a 1 if successful. Saves the information accretion values for each term in the ontology
+Does not return a specific value. Saves the information accretion values for each term in the ontology
 in a .rda file that specifies the organism and the ont version. Parent count and term count
 objects are also saved in similarly formatted files so that IA calculations from multiple
 organisms can be combined.
 }
-\references{
-%% ~put references to the literature/web site here ~
+
+\note{
+In order to compute IA for an organism, the specific annotation data set for that organism must be installed by the user. Here is a list of supported organisms (names in the format that should be passed to computeIA) and the correspoinding packages needed:
+
+anopheles   = org.Ag.eg.db
+
+arabidopsis = org.At.tair.db
+
+bovine      = org.Bt.eg.db
+
+canine      = org.Cf.eg.db
+
+chicken     = org.Gg.eg.db
+
+chimp       = org.Pt.eg.db
+
+ecolik12    = org.EcK12.eg.db
+
+fly         = org.Dm.eg.db
+
+human       = org.Hs.eg.db
+
+malaria     = org.Pf.plasmo.db
+
+mouse       = org.Mm.eg.db
+
+pig         = org.Ss.eg.db
+
+rat         = org.Rn.eg.db
+
+rhesus      = org.Mmu.eg.db
+
+worm        = org.Ce.eg.db
+
+xenopus     = org.Xl.eg.db
+
+yeast       = org.Sc.sgd.db
+
+zebrafish   = org.Dr.eg.db
 }
+
 \author{
 Ian Gonzalez and Wyatt Clark
 }
@@ -53,5 +92,19 @@ Ian Gonzalez and Wyatt Clark
 \seealso{
 \code{\link{RUMIcurve}}
 \code{\link{findRUMI}}
-\code{\link{SemDist}}
+}
+
+\examples{
+\dontrun{
+# Calculate IA, specify ontology
+ontfile <- system.file("extdata", "mfo_ontology.txt", package="SemDist")
+computeIA("MF", "human", specify.ont=TRUE,
+         myont=ontfile, specify.annotations=FALSE)
+          
+# Calculate IA, specify ontology and annotations
+annotations <- system.file("extdata", "MFO_LABELS_TEST.txt", package="SemDist")
+computeIA("my", "values", specify.ont=TRUE, 
+          myont=ontfile, specify.annotations=TRUE, 
+          annotfile=annotations)
+  }
 }

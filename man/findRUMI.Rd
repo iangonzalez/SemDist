@@ -12,8 +12,8 @@ Information accretion based predictor assessment
 }
 
 \usage{
-findRUMI(ont, organism, threshold = 0.05, truefile="trues.txt",
-          predfile="preds.txt", outfile="rumi.rda")
+findRUMI(ont, organism, threshold = 0.05, truefile="",
+          predfile = "", IAfile = NULL, outfile = "rumi.rda")
 }
 
 \arguments{
@@ -29,14 +29,14 @@ findRUMI(ont, organism, threshold = 0.05, truefile="trues.txt",
   \item{predfile}{Text file from which to read predicted annotations of sequences. Should be
                   a tab-delineated file with 3 columns: Sequences, GO terms (accessions), and
                   probability score from 0 to 1 for each prediction.}
+    \item{IAfile}{A .rda filename (character) containing a named numeric vector of IA values for all
+  the GO terms being used that will be used for calculations instead of R
+  packages. The vector saved in the file must be called "IA" or "IAccr" (see computeIA). This argument is optional.}
   \item{outfile}{Filename to save the results of the function call as an R object.}
 }
 
 \value{
   A data frame containing the RU and MI values for each sequence in the file.
-}
-\references{
-%% ~put references to the literature/web site here ~
 }
 
 \author{
@@ -46,5 +46,13 @@ Ian Gonzalez and Wyatt Clark
 \seealso{
 \code{\link{computeIA}}
 \code{\link{RUMIcurve}}
-\code{\link{SemDist}}
+}
+
+\examples{
+# Using test data sets from SemDist, calculate RU and MI:
+truefile <- system.file("extdata", "MFO_LABELS_TEST.txt", package="SemDist")
+predfile <- system.file("extdata", "MFO_PREDS_TEST.txt", package="SemDist")
+rumiTable <- findRUMI("MF", "human", 0.75, truefile, predfile)
+avgRU <- mean(rumiTable$RU)
+avgMI <- mean(rumiTable$MI)
 }

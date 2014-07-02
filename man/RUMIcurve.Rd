@@ -10,9 +10,9 @@ same sequences. Calculates and outputs the average remaining uncertainty, misinf
 and semantic similarity at a series of user-specified thresholds.
 }
 \usage{
-RUMIcurve(ont, organism, increment = 0.05, predfiles, truefile, 
-          outfile = "rumicurve.rda", add.weighted = FALSE, 
-          add.prec.rec = FALSE)
+RUMIcurve(ont, organism, increment = 0.05, truefile, predfiles, 
+          IAfile = NULL, outfile = "rumicurve.rda", 
+          add.weighted = FALSE, add.prec.rec = FALSE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -24,14 +24,17 @@ RUMIcurve(ont, organism, increment = 0.05, predfiles, truefile,
                     threshold that should be calculated. Note that the iteration starts from
                     a threshold of 1, so an increment value of 0.08 will result in the
                     thresholds 0.92, 0.84, 0.76 ... being used.}
-  \item{predfiles}{A character vector containing which files to read in as the predicted
-                    annotations. Should be tab-delimited, with the first column containing
-                    sequences, the second column containing GO accessions, and the third
-                    column containing the predictors 0-1 score for that prediction.}
   \item{truefile}{A character vector indicating the file from which to read the true
                   annotations for the given sequences. Should be tab-delimited, with the
                   first column containing the sequence ids and the second containing GO
                   accessions.}
+  \item{predfiles}{A character vector containing which files to read in as the predicted
+                    annotations. Should be tab-delimited, with the first column containing
+                    sequences, the second column containing GO accessions, and the third
+                    column containing the predictors 0-1 score for that prediction.}
+  \item{IAfile}{A .rda filename (character) containing a named numeric vector of IA values for all
+  the GO terms being used that will be used for calculations instead of R
+  packages. The vector saved in the file must be called "IA" or "IAccr" (see computeIA). This argument is optional.}
   \item{outfile}{A file in which to save the function output as an R object. Defaults to
                   "rumicurve.rda". Should be a character vector.}
   \item{add.weighted}{A boolean indicating whether or not to add calculation of information
@@ -40,26 +43,27 @@ RUMIcurve(ont, organism, increment = 0.05, predfiles, truefile,
                       and specificity values for the prediction at each threshold and add
                       to the output.}
 }
-\details{
-%%  ~~ If necessary, more details than the description above ~~
-}
+
 \value{
 Returns a named list with the same number of elements as the input "predfiles".
 Each element is a data frame containing all of the user-requested values for the data at
 each threshold.
 }
-\references{
-%% ~put references to the literature/web site here ~
-}
+
 \author{
 Ian Gonzalez and Wyatt Clark
-}
-\note{
-%%  ~~further notes~~
 }
 
 \seealso{
 \code{\link{computeIA}}
 \code{\link{findRUMI}}
-\code{\link{SemDist}}
+}
+
+\examples{
+# Using test data sets from SemDist, plot a RUMI curve:
+truefile <- system.file("extdata", "MFO_LABELS_TEST.txt", package="SemDist")
+predfile <- system.file("extdata", "MFO_PREDS_TEST.txt", package="SemDist")
+avgRUMIvals <- RUMIcurve("MF", "human", 0.05, truefile, predfile)
+firstset <- avgRUMIvals[[1]]
+plot(firstset$RU, firstset$MI)
 }
