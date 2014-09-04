@@ -1,0 +1,8 @@
+\contentsline {section}{\numberline {1}Overview and Background}{2}{section.1}
+\contentsline {subsection}{\numberline {1.1}Metric definitions}{2}{subsection.1.1}
+\contentsline {section}{\numberline {2}Installation and Requirements}{4}{section.2}
+\contentsline {section}{\numberline {3}Calculating information accretion values}{4}{section.3}
+\contentsline {section}{\numberline {4}Getting Started with RU-MI Calculations}{6}{section.4}
+\contentsline {section}{\numberline {5}Creating a RU-MI Curve}{7}{section.5}
+\contentsline {section}{\numberline {6}Additional metrics}{8}{section.6}
+\contentsline {section}{\numberline {7}Acknowledgments}{9}{section.7}

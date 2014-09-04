@@ -1,0 +1,51 @@
+\begin{thebibliography}{7}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Ashburner et~al.(2000)]{Ashburner2000}
+Michael Ashburner et~al.
+\newblock Gene ontology: tool for the unification of biology. {The Gene
+  Ontology Consortium}.
+\newblock \emph{Nature Genetics}, 25\penalty0 (1):\penalty0 25--29, 2000.
+
+\bibitem[Bioconductor(2014)]{Anno}
+Bioconductor.
+\newblock {AnnotationData Packages}, 2014.
+\newblock URL
+  \url{http://master.bioconductor.org/packages/release/data/annotation/}.
+
+\bibitem[Clark(2014)]{Clark2014Information}
+Wyatt~Travis Clark.
+\newblock \emph{Information-Theoretic Evaluation for Computational Biomedical
+  Ontologies}.
+\newblock Springer International Publishing, 2014.
+
+\bibitem[Clark and Radivojac(2013)]{Clark2013}
+Wyatt~Travis Clark and Predrag Radivojac.
+\newblock Information-theoretic evaluation of predicted ontological
+  annotations.
+\newblock \emph{Bioinformatics}, 29\penalty0 (13):\penalty0 i53--i61, 2013.
+
+\bibitem[Lord et~al.(2003)Lord, Stevens, Brass, and Goble]{Lord2003}
+Phillip~W. Lord, Robert~D. Stevens, Andy Brass, and Carole~A. Goble.
+\newblock Investigating semantic similarity measures across the {Gene
+  Ontology}: the relationship between sequence and annotation.
+\newblock \emph{Bioinformatics}, 19\penalty0 (10):\penalty0 1275--1283, 2003.
+
+\bibitem[Resnik(1995)]{Resnik1995}
+Philip Resnik.
+\newblock Using information content to evaluate semantic similarity in a
+  taxonomy.
+\newblock In \emph{Proceedings of the 14th International Joint Conference on
+  Artificial Intelligence}, pages 448--453, 1995.
+
+\bibitem[Yu et~al.(2010)Yu, Li, Qin, Bo, Wu, and Wang]{Yu2010}
+Guangchuang Yu, Fei Li, Yide Qin, Xiaochen Bo, Yibo Wu, and Shengqi Wang.
+\newblock {GOSemSim: an R package for measuring semantic similarity among GO
+  terms and gene products}.
+\newblock \emph{Bioinformatics}, 26\penalty0 (7):\penalty0 976--978, 2010.
+
+\end{thebibliography}

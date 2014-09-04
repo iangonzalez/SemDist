@@ -1,0 +1,9 @@
+# Export user functions
+exportPattern("computeIA", "findRUMI", "RUMIcurve")
+
+# Import all packages listed as Imports or Depends
+import(
+  AnnotationDbi,
+  GO.db,
+  annotate
+)
