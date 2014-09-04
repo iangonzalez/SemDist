@@ -1,5 +1,7 @@
 ##From GOSemSim package
 
+##' @author Yu Guangchuang
+##' @modified by Ian Gonzalez
 getDb <- function(organism) {
     annoDb <- switch(organism,
                      anopheles   = "org.Ag.eg.db",
@@ -26,6 +28,8 @@ getDb <- function(organism) {
     annoDb
 }
 
+##' @author Yu Guangchuang
+##' @modified by Ian Gonzalez
 loadGOMap_internal <- function(organism){
     annoDb <- getDb(organism)
 
@@ -59,8 +63,8 @@ loadGOMap_internal <- function(organism){
     SemDistEnv[["gomap.flag"]] <- organism
 }
 
-##' @importMethodsFrom AnnotationDbi exists
-##' @importMethodsFrom AnnotationDbi get
+##' @author Yu Guangchuang
+##' @modified by Ian Gonzalez
 loadGOMap <- function(organism) {
     annoDb <- getDb(organism)
     if (!exists(annoDb, envir=SemDistEnv) || !exists("gomap", envir=SemDistEnv)) {
@@ -72,7 +76,8 @@ loadGOMap <- function(organism) {
     }
 }
 
-##' @importMethodsFrom AnnotationDbi get
+##' @author Yu Guangchuang
+##' @modified by Ian Gonzalez
 gene2GO <- function(gene, organism, ont, dropCodes) {
     gene <- as.character(gene)
     loadGOMap(organism)
