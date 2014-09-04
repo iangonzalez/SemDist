@@ -7,10 +7,7 @@ Parent Count Data
 \description{
 This data set contains the parent count values for each term in the requested ontology/species (the number of times that the term's parents annotate a protein). This can be used along with the term count to calculate information accretion.
 }
-<<<<<<< HEAD
 \usage{parentcnt}
-=======
->>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 \format{
   A named numeric vector with one value corresponding to each GO accession in the ontology.
 }

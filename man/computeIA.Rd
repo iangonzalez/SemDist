@@ -18,29 +18,15 @@ computeIA(ont, organism, evcodes = NULL, specify.ont = FALSE,
               , corresponding to Cellular Component, Molecular Function, and Biological
               Process.}
   \item{organism}{A character vector indicating which organism's annotation data to use.}
-<<<<<<< HEAD
   \item{evcodes}{A character vector specifying which evidence codes to use in the ontology
                 data. Default NULL value causes all codes to be used.}
-=======
-  \item{evcodes}{A character vector specifying which evidence codes to ignore in the ontology
-                data. Defaults to none.}
->>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
   \item{specify.ont}{
   A boolean indicating whether the user wants to specify their own version
                       of the ontology.}
   \item{myont}{
   Character object indicating what file to read in the specified ontology from. 
-<<<<<<< HEAD
   The ontology should be specified as a tab-delimited file with 2 columns (no header). 
   Each row in the file should indicate a parent-child relationship between two GO accessions (e.g. "GO:0003674   GO:0004000")}
-=======
-  The ontology should be specified as a pipe-delimited (| symbol) file with 4
-               columns. The first column contains all parent term accessions and the third column
-               contains all child term accessions. Each row should represent a parent-child
-               link. Every link in the ontology should be specified. The 2nd and 4th columns
-               should contain the english terms corresponding to the accessions in the 1st and
-               3rd columns.}
->>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
   \item{specify.annotations}{Boolean indicating whether the user wants to specify sequence
                           annotations from a file. Should only be TRUE if specify.ont is TRUE.}
   \item{annotfile}{Character object indicating which file to read sequence annotations from.
@@ -105,25 +91,11 @@ Ian Gonzalez and Wyatt Clark
 }
 
 \examples{
-<<<<<<< HEAD
           
 # Calculate IA, specify ontology and annotations
 ontfile <- system.file("extdata", "mfo_ontology.txt", package="SemDist")
-=======
-\dontrun{
-# Calculate IA, specify ontology
-ontfile <- system.file("extdata", "mfo_ontology.txt", package="SemDist")
-computeIA("MF", "human", specify.ont=TRUE,
-         myont=ontfile, specify.annotations=FALSE)
-          
-# Calculate IA, specify ontology and annotations
->>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 annotations <- system.file("extdata", "MFO_LABELS_TEST.txt", package="SemDist")
 computeIA("my", "values", specify.ont=TRUE, 
           myont=ontfile, specify.annotations=TRUE, 
           annotfile=annotations)
-<<<<<<< HEAD
-=======
-  }
->>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 }

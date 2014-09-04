@@ -8,10 +8,6 @@ getDb <- function(organism) {
                      canine      = "org.Cf.eg.db",
                      chicken     = "org.Gg.eg.db",
                      chimp       = "org.Pt.eg.db",
-<<<<<<< HEAD
-=======
-                     ## coelicolor= "org.Sco.eg.db", ## this package is no longer supported.
->>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
                      ecolik12    = "org.EcK12.eg.db",
                      ecsakai     = "org.EcSakai.eg.db",
                      fly         = "org.Dm.eg.db",
@@ -25,26 +21,16 @@ getDb <- function(organism) {
                      xenopus     = "org.Xl.eg.db",
                      yeast       = "org.Sc.sgd.db",
                      zebrafish   = "org.Dr.eg.db",
-<<<<<<< HEAD
                      stop("Unsupported organism: ", sQuote(organism))
                      )
     annoDb
-=======
-                     )
-    return(annoDb)
->>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 }
 
 loadGOMap_internal <- function(organism){
     annoDb <- getDb(organism)
 
-<<<<<<< HEAD
     ## loading annotation package
     annoEnv <- suppressPackageStartupMessages(loadNamespace(annoDb))
-=======
-    ## loading annotation pakcage
-    require(annoDb, character.only = TRUE)
->>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 
     gomap <- switch(organism,
                     anopheles    = "org.Ag.egGO",
@@ -53,10 +39,6 @@ loadGOMap_internal <- function(organism){
                     canine       = "org.Cf.egGO",
                     chicken      = "org.Gg.egGO",
                     chimp        = "org.Pt.egGO",
-<<<<<<< HEAD
-=======
-                    ## coelicolor = "org.Sco.egGO", ## no longer supports.
->>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
                     ecolik12     = "org.EcK12.egGO",
                     ecsakai      = "org.EcSakai.egGO",
                     fly          = "org.Dm.egGO",
@@ -70,30 +52,18 @@ loadGOMap_internal <- function(organism){
                     xenopus      = "org.Xl.egGO",
                     yeast        = "org.Sc.sgdGO",
                     zebrafish    = "org.Dr.egGO",
-<<<<<<< HEAD
                     stop("Unsupported organism: ", sQuote(organism))
                     )
     SemDistEnv[[annoDb]] <- annoEnv[[annoDb]]
     SemDistEnv[["gomap"]] <- get(gomap, annoEnv)
     SemDistEnv[["gomap.flag"]] <- organism
-=======
-                    )
-    gomap <- eval(parse(text=gomap))
-    assign("gomap", gomap, envir=SemDistEnv)
-    assign("gomap.flag", organism, envir=SemDistEnv)
->>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 }
 
 ##' @importMethodsFrom AnnotationDbi exists
 ##' @importMethodsFrom AnnotationDbi get
 loadGOMap <- function(organism) {
-<<<<<<< HEAD
     annoDb <- getDb(organism)
     if (!exists(annoDb, envir=SemDistEnv) || !exists("gomap", envir=SemDistEnv)) {
-=======
-    if(!exists("SemDistEnv")) .initial()
-    if (!exists("gomap", envir=SemDistEnv)) {
->>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
         loadGOMap_internal(organism)
     } else {
         flag <- get("gomap.flag", envir=SemDistEnv)
@@ -112,32 +82,13 @@ gene2GO <- function(gene, organism, ont, dropCodes) {
     if (all(is.na(go)))
         return (NA)
 
-<<<<<<< HEAD
-=======
-    ## go.df <- ldply(go, function(i) c(GOID=i$GOID, Evidence=i$Evidence, Ontology=i$Ontology))
-    ## go.df <- go.df[ !go.df$Evidence %in% dropCodes, ] ## compatible to work with NA and NULL
-    ## goid <- go.df[go.df$Ontology == ont, "GOID"]
->>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
     goid <- sapply(go, function(i) i$GOID)
     evidence <- sapply(go, function(i) i$Evidence)
     ontology <- sapply(go, function(i) i$Ontology)
 
-<<<<<<< HEAD
     idx <- (evidence %in% dropCodes) & (ontology == ont)
     if (sum(idx) == 0)
         NA
     else
         unname(goid[idx])
-=======
-    idx <- ! evidence %in% dropCodes
-    goid <- goid[idx] ## drop dropCodes Evidence
-    ontology <- ontology[idx]
-    goid <- goid[ontology == ont]
-
-    if (length(goid) == 0)
-	   return (NA)
-
-    goid <- as.character(unique(goid))
-    return (goid)
->>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 }

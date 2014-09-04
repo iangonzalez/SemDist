@@ -13,11 +13,7 @@ Information accretion based predictor assessment
 
 \usage{
 findRUMI(ont, organism, threshold = 0.05, truefile="",
-<<<<<<< HEAD
           predfile = "", IAccr = NULL)
-=======
-          predfile = "", IAfile = NULL, outfile = "rumi.rda")
->>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 }
 
 \arguments{
@@ -33,16 +29,9 @@ findRUMI(ont, organism, threshold = 0.05, truefile="",
   \item{predfile}{Text file from which to read predicted annotations of sequences. Should be
                   a tab-delineated file with 3 columns: Sequences, GO terms (accessions), and
                   probability score from 0 to 1 for each prediction.}
-<<<<<<< HEAD
     \item{IAccr}{A variable containing a named numeric vector of IA values for all
   the GO terms being used that will be used for calculations instead of R
   packages. This argument is optional.}
-=======
-    \item{IAfile}{A .rda filename (character) containing a named numeric vector of IA values for all
-  the GO terms being used that will be used for calculations instead of R
-  packages. The vector saved in the file must be called "IA" or "IAccr" (see computeIA). This argument is optional.}
-  \item{outfile}{Filename to save the results of the function call as an R object.}
->>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 }
 
 \value{

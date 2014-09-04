@@ -1,29 +1,15 @@
 Package: SemDist
-<<<<<<< HEAD
 Version: 0.99.2
 Date: 2014-07-21
 Title: Information Accretion-based Function Predictor Evaluation
 Author: Ian Gonzalez and Wyatt Clark
 Maintainer: Ian Gonzalez <gonzalez.isv@gmail.com>
 Depends: AnnotationDbi, GO.db, annotate
-=======
-Version: 0.99.0
-Date: 2014-04-10
-Title: Information Accretion-based Function Predictor Evaluation
-Author: Ian Gonzalez and Wyatt Clark
-Maintainer: Ian Gonzalez <gonzalez.isv@gmail.com>
-Depends: R (>= 2.10.0), AnnotationDbi, GO.db, annotate
->>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 Description: This package implements methods to calculate information
   accretion for a given version of the gene ontology and uses this
   data to calculate remaining uncertainty, misinformation, and
   semantic similarity for given sets of predicted annotations and
   true annotations from a protein function predictor.
-<<<<<<< HEAD
 biocViews: Classification, Annotation, GO
 License: GPL (>= 2)
 URL: http://github.com/iangonzalez/SemDist
-=======
-License: GPL (>= 2)
-URL: http://github.com/iangonzalez/SemDist
->>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
