@@ -11,8 +11,13 @@ and semantic similarity at a series of user-specified thresholds.
 }
 \usage{
 RUMIcurve(ont, organism, increment = 0.05, truefile, predfiles, 
+<<<<<<< HEAD
           IAccr = NULL, add.weighted = FALSE, 
           add.prec.rec = FALSE)
+=======
+          IAfile = NULL, outfile = "rumicurve.rda", 
+          add.weighted = FALSE, add.prec.rec = FALSE)
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -32,9 +37,17 @@ RUMIcurve(ont, organism, increment = 0.05, truefile, predfiles,
                     annotations. Should be tab-delimited, with the first column containing
                     sequences, the second column containing GO accessions, and the third
                     column containing the predictors 0-1 score for that prediction.}
+<<<<<<< HEAD
   \item{IAccr}{A variable containing a named numeric vector of IA values for all
   the GO terms being used that will be used for calculations instead of R
   packages. This argument is optional.}
+=======
+  \item{IAfile}{A .rda filename (character) containing a named numeric vector of IA values for all
+  the GO terms being used that will be used for calculations instead of R
+  packages. The vector saved in the file must be called "IA" or "IAccr" (see computeIA). This argument is optional.}
+  \item{outfile}{A file in which to save the function output as an R object. Defaults to
+                  "rumicurve.rda". Should be a character vector.}
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
   \item{add.weighted}{A boolean indicating whether or not to add calculation of information
                     content weighted versions of RU, MI, and SS to the output.}
   \item{add.prec.rec}{A boolean indicating whether or not to calculate precision, recall

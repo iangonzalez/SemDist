@@ -16,6 +16,10 @@
 loadIA <- function(organism, ont) {
   termcnt <- NULL
   parentcnt <- NULL
+<<<<<<< HEAD
+=======
+  if(!exists("IAEnv")) .initial()
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
   if (length(organism) == 1) {
     fname <- paste("Info_Accretion",
                    organism,
@@ -68,7 +72,15 @@ loadIA <- function(organism, ont) {
 
 ## function to get information accretion data from the environment
 ## Accepts single organism or a char vector of them
+<<<<<<< HEAD
 getIA <- function(organism, ont) {  
+=======
+getIA <- function(organism, ont) {
+  if(!exists("IAEnv")) {
+    .initial()
+  }
+  
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
   org.ont.IA <- paste(paste(organism, collapse=""),
                       ont,
                       "IA",
@@ -78,7 +90,11 @@ getIA <- function(organism, ont) {
     loadIA(organism, ont)
   }
   IA <- get(org.ont.IA, envir=IAEnv)
+<<<<<<< HEAD
   IA
+=======
+  return(IA)
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 }
 
 ## 2 functions to read in the predicted and true data from files.
@@ -89,7 +105,11 @@ getPredictions <- function(filename) {
   predictions$scores <- as.numeric(predictions$scores)    
   predictions <- predictions[predictions$scores != 0,]   #remove predictions with score 0
   predictions <- as.data.frame(predictions)
+<<<<<<< HEAD
   predictions
+=======
+  return(predictions)
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 }
 
 getTrues <- function(filename) {
@@ -97,11 +117,17 @@ getTrues <- function(filename) {
   trues <- trues[,1:2]
   colnames(trues) <- c("seqids", "terms")
   trues <- as.data.frame(trues)
+<<<<<<< HEAD
   trues
 }
 
 
 
+=======
+  return(trues)
+}
+
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 ## findRUMI will take a file of predicted terms (1 column each for sequences, terms, and scores from 0-1),
 ## a threshold value, the relevant ontological info (ont/organism) and return a data frame containing
 ## RU and MI for each sequence whose terms were predicted. Alternatively, if fromfile is set to false,
@@ -110,12 +136,17 @@ getTrues <- function(filename) {
 ## terms for each sequence (otherwise it will calculate this on its own).
 
 findRUMI <- function(ont, organism, threshold = 0.05, 
+<<<<<<< HEAD
                      truefile="", predfile="", IAccr=NULL) {
+=======
+                     truefile="", predfile="", IAfile=NULL, outfile="rumi.rda") {
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
   trueIDs <- getTrues(truefile)       ##Read in data from given files
   predIDs <- getPredictions(predfile)
   
   seqs    <- unique(append(predIDs$seqids,trueIDs$seqids))   ##Get list of sequences whose annotations have been predicted
   predIDs <- predIDs[predIDs$scores > threshold,]   ## Remove predictions below the threshold
+<<<<<<< HEAD
   if (is.null(IAccr)) {
     IA <- getIA(organism, ont)
   } else {
@@ -124,6 +155,26 @@ findRUMI <- function(ont, organism, threshold = 0.05,
   
   ## Get all GO term ancestors for later propagation step:
   Ancestor <- as.list(.getAncestors(ont))
+=======
+  if (is.null(IAfile)) {
+    IA <- getIA(organism, ont)
+  } else {
+    load(IAfile)
+    if (exists("IAccr")) {
+      IA <- get("IAccr")
+    } else if (!exists("IA")) {
+      stop("Specified IA data must be saved as 'IA' or 'IAccr' .rda file\n")
+    }
+  }
+  
+  ## Get all GO term ancestors for later propagation step:
+  Ancestor.name <- switch(ont,
+                          MF = "GOMFANCESTOR",
+                          BP = "GOBPANCESTOR",
+                          CC = "GOCCANCESTOR"
+  )
+  Ancestor <- AnnotationDbi::as.list(get(Ancestor.name,envir=SemDistEnv))
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
   Ancestor <- Ancestor[!is.na(Ancestor)]
   
   ## For each sequence, find its true and predicted terms, find their intersection,
@@ -131,7 +182,17 @@ findRUMI <- function(ont, organism, threshold = 0.05,
   ## RU is calculated by subtracting the intersection from the true IA and MI is
   ## calculated by subtracting the intersection from the pred IA.
   
+<<<<<<< HEAD
   seqtrues <- split(trueIDs$terms, f = factor(trueIDs$seqids, seqs))
+=======
+  seqtrues <- as.list(rep("",length(seqs)))
+  names(seqtrues) <- seqs
+  for (i in 1:length(trueIDs$seqids)) {
+    seqtrues[[ trueIDs$seqids[i] ]] <- append(seqtrues[[ trueIDs$seqids[i] ]],
+                                              trueIDs$terms[i])
+  }
+  seqtrues <- lapply(seqtrues, function(x) x[x!=""])
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
   
   ## Propagate all the true terms with all ancestors up to the root:
   seqtrues <- lapply(seqtrues,function(terms){
@@ -139,6 +200,7 @@ findRUMI <- function(ont, organism, threshold = 0.05,
   })
   seqtrues <- lapply(seqtrues, function(x) x[x != "all"])
   
+<<<<<<< HEAD
   message("Getting true IAs\n")
   # Helper function to sum IA over a sequence's term set: 
   IA_sum <- function(idx) sum(na.omit(IA[idx]))
@@ -156,12 +218,46 @@ findRUMI <- function(ont, organism, threshold = 0.05,
   crossoverIA <- sapply(crossover, IA_sum)
 
   message("Calculating RU, MI\n")
+=======
+  cat("Getting true IAs\n")
+  trueIA <- sapply(seqtrues, function(trues){
+    sum(IA[trues][!is.na(IA[trues])])
+  })
+  names(trueIA) <- seqs
+  
+  cat("Getting sequence predicted terms.\n")
+  seqpreds <- as.list(rep("",length(seqs)))
+  names(seqpreds) <- seqs
+  for (i in 1:length(predIDs$seqids)) {
+    end <- length(seqpreds[[ predIDs$seqids[i] ]])
+    seqpreds[[ predIDs$seqids[i] ]][end + 1] <- predIDs$terms[i]
+  }
+  
+  seqpreds <- lapply(seqpreds, function(x) x[x!=""])
+  cat("Getting IA values for predicted terms.\n")
+  predIA <- sapply(seqpreds, function(preds) sum(IA[preds][!is.na(IA[preds])]))
+  
+  cat("Doing the same for the intersect.\n")
+  crossover <- sapply(seqs, function(seq) {
+    intersect(seqtrues[[seq]],seqpreds[[seq]])
+  })
+
+  crossoverIA <- sapply(crossover,function(int) sum(IA[int][!is.na(IA[int])]))
+
+  cat("Calculating RU, MI\n")
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
   RU <- trueIA - crossoverIA
   MI <- predIA - crossoverIA
   answers <- data.frame(RU=RU,MI=MI)
   
+<<<<<<< HEAD
   ## These values are returned in a data frame with RU in first col, MI second.
   answers
+=======
+  save(answers, file = outfile)
+  ## These values are returned in a data frame with RU in first col, MI second.
+  return(answers)
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 }
 
 ## RUMIcurve is function that takes in a function predictors predictions, the true annotations,
@@ -171,13 +267,18 @@ findRUMI <- function(ont, organism, threshold = 0.05,
 ## indicators (weighted RUMI, prec/recall) to be output if needed.
 
 RUMIcurve <- function(ont, organism, increment = 0.05, truefile, predfiles,
+<<<<<<< HEAD
                       IAccr = NULL, add.weighted = FALSE, 
+=======
+                      IAfile = NULL, outfile = "rumicurve.rda", add.weighted = FALSE, 
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
                       add.prec.rec = FALSE) {
   thresholds <- seq(1-increment, increment, -1*increment)    ## Create the sequence of thresholds to loop over
   trueIDs <- getTrues(truefile)                           ## Read in data from given files if from file
   
   #Get IA data, from R and getIA function if IAfile is null,
   #from specified .rda file otherwise. Must be called "IA" or "IAccr"
+<<<<<<< HEAD
   if (is.null(IAccr)) {
     IA <- getIA(organism, ont)
   } else {
@@ -188,26 +289,66 @@ RUMIcurve <- function(ont, organism, increment = 0.05, truefile, predfiles,
   
   ## Get all GO term ancestors for later propagation step:
   Ancestor <- as.list(.getAncestors(ont))
+=======
+  if (is.null(IAfile)) {
+    IA <- getIA(organism, ont)
+  } else {
+    load(IAfile)
+    if (exists("IAccr")) {
+      IA <- get("IAccr")
+    } else if (!exists("IA")) {
+      stop("Specified IA data must be saved as 'IA' or 'IAccr' .rda file\n")
+    }
+  }
+  IC <- sapply(IA, sum)
+  totalI <- sum(IC)
+  
+  output <- list()
+  
+  ## Get all GO term ancestors for later propagation step:
+  Ancestor.name <- switch(ont,
+                          MF = "GOMFANCESTOR",
+                          BP = "GOBPANCESTOR",
+                          CC = "GOCCANCESTOR"
+  )
+  Ancestor <- AnnotationDbi::as.list(get(Ancestor.name,envir=SemDistEnv))
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
   Ancestor <- Ancestor[!is.na(Ancestor)]
   
   ## For each file given in predfiles:
   ## Get the predicted IDs from the file and generate a list of the IA sum for the true annotations
   ## for each relevant sequence (since this only needs to be computed once).
   for (file in predfiles) {                               
+<<<<<<< HEAD
     message("Working on data for file: ", file, "\n")
+=======
+    cat("Working on data for file: ", file, "\n")
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
     predIDs  <- getPredictions(file)
     predIDs  <- predIDs[predIDs$scores != 0,]
     seqs     <- unique(append(predIDs$seqids,trueIDs$seqids))
     seqs     <- sort(seqs)
     
+<<<<<<< HEAD
     message("Getting true terms\n")
     seqtrues <- split(trueIDs$terms, f = factor(trueIDs$seqids, seqs))
+=======
+    cat("Getting true terms\n")
+    seqtrues <- as.list(rep("",length(seqs)))
+    names(seqtrues) <- seqs
+    for (i in 1:length(trueIDs$seqids)) {
+      seqtrues[[ trueIDs$seqids[i] ]] <- append(seqtrues[[ trueIDs$seqids[i] ]],
+                                                trueIDs$terms[i])
+    }
+    seqtrues <- lapply(seqtrues, function(x) x[x!=""])
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
     
     ## Propagate all the true terms with all ancestors up to the root:
     seqtrues <- lapply(seqtrues,function(terms){
       unique(c(terms, unlist(Ancestor[terms], use.names=FALSE)))
     })
     seqtrues <- lapply(seqtrues, function(x) x[x != "all"])
+<<<<<<< HEAD
 
     # Helper function to sum IA for a sequence's terms
     IA_sum <- function(idx) sum(na.omit(IA[idx]))
@@ -215,11 +356,24 @@ RUMIcurve <- function(ont, organism, increment = 0.05, truefile, predfiles,
     trueIA <- sapply(seqtrues, IA_sum)
     names(trueIA) <- seqs
     totalI <- sum(trueIA)
+=======
+    
+    cat("Getting true IAs\n")
+    trueIA <- sapply(seqtrues, function(trues){
+      sum(IA[trues][!is.na(IA[trues])])
+    })
+    names(trueIA) <- seqs
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
     
     ## Initialize data strctures to hold predicted terms for each sequence and output frame
     seqpreds <- as.list(rep("",length(seqs)))
     seqpreds <- lapply(seqpreds, function(x) x[x != ""])
     names(seqpreds) <- seqs
+<<<<<<< HEAD
+=======
+    predIA <- rep(0,length(seqs))
+    names(predIA) <- seqs
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
     
     if (!add.weighted) { 
       answers <- data.frame(threshold = thresholds,
@@ -252,8 +406,13 @@ RUMIcurve <- function(ont, organism, increment = 0.05, truefile, predfiles,
     ## For each threshold, add the predicted terms to the list corresponding to 
     ## their sequence, calc IA, RU, MI, (and other requested values) and put in output frame
     for (thresh in thresholds) {    
+<<<<<<< HEAD
       message("Now working on threshold: ", thresh, "\n")
       message("Getting sequence predicted terms.\n")
+=======
+      cat("Now working on threshold: ",thresh,"\n")
+      cat("Getting sequence predicted terms.\n")
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
       
       # Get ONLY the new predicted IDs for this threshold range:
       newpreds <- predIDs[(predIDs$scores > thresh &
@@ -267,6 +426,7 @@ RUMIcurve <- function(ont, organism, increment = 0.05, truefile, predfiles,
         next
       }
       
+<<<<<<< HEAD
       # Then add them to the seqpreds list of lists.
       # This step also propagates all the new terms to the root:
       newpreds <- split(newpreds$terms, f = factor(newpreds$seqids, seqs))
@@ -280,11 +440,41 @@ RUMIcurve <- function(ont, organism, increment = 0.05, truefile, predfiles,
       message("Doing the same for the intersect.\n")
       crossover <- Map(intersect, seqtrues, seqpreds)
       crossoverIA <- sapply(crossover, IA_sum)
+=======
+      #Then add them to the seqpreds list of lists:
+      for (i in 1:length(newpreds$seqids)) {
+        seqpreds[[ newpreds$seqids[i] ]] <- append(seqpreds[[ newpreds$seqids[i] ]],
+                                                   newpreds$terms[i])
+        ## This step also adds any ancestor terms of the term being added (propagation):
+        seqpreds[[ newpreds$seqids[i] ]] <- unique(c(seqpreds[[ newpreds$seqids[i] ]], 
+                                                     Ancestor[[ newpreds$terms[i] ]]))
+      }
+      
+      cat("Getting IA values for predicted terms.\n")
+      for (i in 1:length(seqpreds)) {
+        predIA[i] <- sum(IA[ seqpreds[[i]] ][!is.na(IA[ seqpreds[[i]] ])])
+      }
+      
+      cat("Doing the same for the intersect.\n")
+      crossover <- sapply(seqs, function(seq) {
+        intersect(seqtrues[[seq]],seqpreds[[seq]])
+      })
+      
+      crossoverIA <- sapply(crossover, function(int) sum(IA[int][!is.na(IA[int])]))
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
       
       RU <- trueIA - crossoverIA
       MI <- predIA - crossoverIA
       SS <- crossoverIA
+<<<<<<< HEAD
       message("RU: ", mean(RU), ", MI: ", mean(MI), "\n")
+=======
+      cat("RU: ", mean(RU), ", MI: ", mean(MI), "\n")
+          
+      #cat("Precision: ", precision, "\n")
+      #cat("Recall: ", recall, "\n")
+      #cat("Specificity: ", specificity, "\n")
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
       
       answers$RU[answers$threshold == thresh] <- mean(RU)
       answers$MI[answers$threshold == thresh] <- mean(MI)
@@ -304,7 +494,11 @@ RUMIcurve <- function(ont, organism, increment = 0.05, truefile, predfiles,
         Wprecision <- SS / predIA
         Wrecall <- SS / trueIA
         TN <- sum(sapply(seqtrues, function(x) length(seqs) - length(x)))
+<<<<<<< HEAD
         specificity <- TN/(TN + sum(sapply(seqs, function(x) length(seqpreds[[x]]) - length(crossover[[x]]))))
+=======
+        specificity <- TN/(TN + sum(sapply(seqs, function(x) length(seqpreds[[i]]) - length(crossover[[i]]))))
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
         
         answers$precision[answers$threshold == thresh] <- precision
         answers$recall[answers$threshold == thresh] <- recall
@@ -316,5 +510,23 @@ RUMIcurve <- function(ont, organism, increment = 0.05, truefile, predfiles,
     output <- append(output, list(answers))
   }
   names(output) <- predfiles
+<<<<<<< HEAD
   output
+=======
+  save(output, file = outfile)
+  return(output)
+}
+
+#Final testing: (REMOVE BEFORE SHIPPING)
+if (FALSE) {
+ont = "MF"
+organism = "human"
+predfiles = "MFO_BLAST.txt"
+truefile = "MFO_LABELS.txt"
+clarkIA <- read.table("MFO_IA.txt",colClasses="character")
+clarkIA2 <- as.numeric(clarkIA[,2])
+names(clarkIA2) <- clarkIA[,1]
+clarkIA <- clarkIA2
+IA <- clarkIA
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 }

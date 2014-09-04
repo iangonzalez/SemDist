@@ -2,13 +2,20 @@
 %\VignetteIndexEntry{Using SemDist}
 %\newcommand{\tab}[1]{\hspace{.2\textwidth}\rlap{#1}}
 \usepackage{amsmath}
+<<<<<<< HEAD
 \usepackage{hyperref}
+=======
+\usepackage[hidelinks]{hyperref}
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 \usepackage{cleveref}
 \usepackage{natbib}
 \usepackage{url}
 
 \title{An Introduction to SemDist}
+<<<<<<< HEAD
 
+=======
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 \begin{document}
 \SweaveOpts{concordance=TRUE}
 
@@ -154,6 +161,10 @@ This package allows for straightforward calculation of these metrics. It provide
 Install the SemDist package on your version of R with the biocLite and library functions. The package requires R version 2.10.0 or greater and Bioconductor version 2.14 or greater. The annotate, AnnotationDbi, and GO.db packages are also required for functionality.
 <<eval=FALSE>>=
 biocLite("SemDist")
+<<<<<<< HEAD
+=======
+install.packages(c("annotate", "AnnotationDbi", "GO.db"))
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 library(SemDist)
 @
 <<echo=FALSE, eval=TRUE>>=
@@ -166,25 +177,42 @@ library(SemDist)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+<<<<<<< HEAD
 The simplest way to use SemDist is to use one of the provided data sets containing information accretion values. Information accretion values were pre-calculated for each organism using Bioconductor AnnotationData Packages \citep{Anno}. These pre-calculated values can be found in the \path{data/} directory of the SemDist package. (Note that in addition, all other test files used in the following examples can be accessed by the user in the \path{extdata/} directory). Calculations for human protein annotations were performed using only annotations supported by experimental evidence codes (all other species data were calculated with all available annotations).
+=======
+The simplest way to use SemDist is to use one of the provided data sets containing information accretion values. Information accretion values were pre-calculated for each organism using Bioconductor AnnotationData Packages \citep{Anno}. These pre-calculated values can be found in the \path{data/} directory of the SemDist package. (Note that in addition, all other test files used in the following examples can be accessed by the user in the \path{extdata/} directory). Calculations were performed using only annotations supported by experimental evidence codes (EXP, IDA, IPI, IMP, IGI, IEP, TAS, IC). 
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 
 Information accretion values can be recalculated by the user or calculated using different evidence codes using the \texttt{computeIA} function.
 
 <<tidy=FALSE, eval=TRUE>>=
 # Examine built-in IA data
 data("Info_Accretion_mouse_CC", package="SemDist")
+<<<<<<< HEAD
 head(IAccr)
+=======
+str(IAccr)
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 @
 <<eval=FALSE, tidy=FALSE>>=
 # Calculate IA, specify evidence codes
 # Requires downloading annotation data package
+<<<<<<< HEAD
 biocLite("org.Hs.eg.db")
 IAccr <- computeIA("MF", "human", evcodes=c("EXP", "IC"))
+=======
+install.packages("org.Hs.eg.db")
+computeIA("MF", "human", evcodes=c("EXP", "IC"))
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 @
 
 Users can define their own ontology and annotations.  The \texttt{computeIA} function can then calculate information accretion for each term, or entity, in the custom ontology according to \Cref{eq:IA}.
 
+<<<<<<< HEAD
 Ontologies should be specified using a tab-delimited file indicating every parent-child relationship in the ontology; with the first column designating the parent name and the second column identifying the child name. The annotations file should have the same format as the true annotations file used above where annotations represent terms drawn from the specified ontology.  
+=======
+Ontologies should be specified using a tab-delineated file indicating every parent-child relationship in the ontology; with the first column designating the parent name and the second column identifying the child name. The annotations file should have the same format as the true annotations file used above where annotations represent terms drawn from the specified ontology.  
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 
 <<tidy=FALSE, eval=TRUE>>=
 
@@ -193,9 +221,15 @@ ontfile <- system.file("extdata", "mfo_ontology.txt",
                         package="SemDist")
 annotations <- system.file("extdata", "MFO_LABELS_TEST.txt", 
                             package="SemDist")
+<<<<<<< HEAD
 IAccr <- computeIA("my", "values", specify.ont=TRUE, 
                 myont=ontfile, specify.annotations=TRUE, 
                 annotfile=annotations)
+=======
+computeIA("my", "values", specify.ont=TRUE, 
+          myont=ontfile, specify.annotations=TRUE, 
+          annotfile=annotations)
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 @
 
 
@@ -203,14 +237,24 @@ It is also possible to specify your own ontology and use Bioconductor Annotation
 
 <<tidy=FALSE, eval=FALSE>>=
 # Calculate IA, specify ontology
+<<<<<<< HEAD
 IAccr <- computeIA("MF", "human", specify.ont=TRUE,
+=======
+computeIA("MF", "human", specify.ont=TRUE,
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
          myont=ontfile, specify.annotations=FALSE)
 @
 
 
+<<<<<<< HEAD
 When the ontology is specified but annotations are not, annotations are taken from the specified organism. (Note that this may require the installation of databases not provided in the package). The recommended method is to specify both, as is the case in the second example. 
 
 The information accretion data generated in this way can be used in the \texttt{findRUMI} and \texttt{RUMIcurve} functions (which will be discussed below).
+=======
+When the ontology is specified but annotations are not, annotations are taken from the specified organism. (Note that this may require the installation of databases not provided in the package). The recommended method is to specify both, as is the case in the second example. The function will save the output (IA values, term counts, and parent counts for each term in the ontology) as \texttt{.rda} files labeled with the strings passed into the \texttt{ont} and \texttt{organism} arguments (these have no other purpose in this use of the function).
+
+The \texttt{.rda} files generated in this way can be used in the \texttt{findRUMI} and \texttt{RUMIcurve} functions, which will be discussed below.
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -251,19 +295,32 @@ avgMI <- mean(rumiTable$MI)
 where information accretion data from the molecular function portion of the ontology terms annotating human sequences were used (denoted \texttt{"MF"} and \texttt{"human"} in the function call). 
 
 
+<<<<<<< HEAD
 The returned \texttt{rumiTable} variable should contains a data frame with the remaining uncertainty values for each sequence in the first column and the corresponding misinformation values in the second column. Single-number metrics can be obtained by averaging across the entire set.
 
 As mentioned in the above section, user-created IA variables from \texttt{computeIA} output can be used to specify the information accretion values used in the calculation of \texttt{RU} and \texttt{MI} via the \texttt{IAccr} argument:
+=======
+The returned \texttt{rumiTable} variable should contains a data frame with the remaining uncertainty values for each sequence in the first column and the corresponding misinformation values in the second column. Single-number metrics can be obtained by averaging across the entire set. Note that \texttt{findRUMI} also saves the data to a file specified by the \texttt{outfile} argument, which defaults to "rumi.rda" (see the documentation for this function).
+
+As mentioned in the above section, user-created .rda files from \texttt{computeIA} can be used to specify the information accretion values used in the calculation of \texttt{RU} and \texttt{MI} via the \texttt{IAfile} argument.
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 
 <<eval=TRUE, tidy=FALSE>>=
 # A sample IA file that comes with the SemDist package.
 myIA <- system.file("extdata", "myIA.rda", package="SemDist")
+<<<<<<< HEAD
 load(myIA)
+=======
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 
 # "MF" and "human" are present only for naming purposes
 # since IA is taken from myIA.rda
 rumiTable <- findRUMI("MF", "human", 0.75, truefile, predfile, 
+<<<<<<< HEAD
                         IAccr = IA)
+=======
+                        IAfile=myIA)
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 @
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -284,14 +341,28 @@ plot(firstset$RU, firstset$MI)
 
 The \texttt{RUMIcurve} function will accept multiple prediction files (as a character vector) as input, and actually returns a list containing the values calculated for each set of predictions; hence the need for indexing into the first element to get the curve data. The \texttt{firstset} variable contains a data frame with the average RU and MI values for each threshold the function calculated for. In this case, the increment was set to 0.05.
 
+<<<<<<< HEAD
 The plot visualizes how remaining uncertainty and misinformation change as the decision threshold is varried. If multiple predictions are input they can be quickly compared.
+=======
+The plot visualizes how remaining uncertainty and misinformation change as the decision threshold is varried. If multiple predictions are input they can be quickly compared. Note that \texttt{RUMIcurve} will also save the data to a file specified in the \texttt{outfile} argument.
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 
 Semantic distance can be obtained in a straightforward manner from the points in the RU-MI curve according to \Cref{eq:semantic_distance}:
 
 <<eval=TRUE, tidy=FALSE>>=
 # Minimize distance from origin over all points in RUMI curve:
 
+<<<<<<< HEAD
 semdist <- min(sqrt(firstset$MI^2 + firstset$RU^2))
+=======
+semdist <- sqrt(firstset$MI[1]^2 + firstset$RU[1]^2)
+for (i in 1:length(firstset$RU)) {
+    nextdist <- sqrt(firstset$MI[i]^2 + firstset$RU[i]^2)
+    if (nextdist < semdist) {
+        semdist <- nextdist
+    }
+}
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 semdist
 @
 

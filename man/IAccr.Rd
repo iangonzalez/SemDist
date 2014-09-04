@@ -7,7 +7,10 @@ Information Accretion Data
 \description{
 This data set contains the information accretion values for each term in the requested ontology/species.
 }
+<<<<<<< HEAD
 \usage{IAccr}
+=======
+>>>>>>> fce8d5b26e6ecfb454a764e7aa3c606d22b60638
 \format{
   A named numeric vector with one value corresponding to each GO accession in the ontology.
 }
