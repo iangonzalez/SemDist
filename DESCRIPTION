@@ -4,7 +4,7 @@ Date: 2014-09-04
 Title: Information Accretion-based Function Predictor Evaluation
 Author: Ian Gonzalez and Wyatt Clark
 Maintainer: Ian Gonzalez <gonzalez.isv@gmail.com>
-Depends: R >= 3.1, AnnotationDbi, GO.db, annotate
+Depends: R (>= 3.1), AnnotationDbi, GO.db, annotate
 Suggests: GOSemSim
 Description: This package implements methods to calculate information
   accretion for a given version of the gene ontology and uses this
